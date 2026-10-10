@@ -97,4 +97,24 @@ export class AuthController {
   getProfile(@Request() req: any) {
     return req.user;
   }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get current user record' })
+  @ApiResponse({ status: 200, description: 'Returns user record' })
+  getMe(@Request() req: any) {
+    return this.authService.getMe(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Log out and revoke refresh token' })
+  @ApiResponse({ status: 200, description: 'Logged out' })
+  logout(@Request() req: any) {
+    return this.authService.logout(req.user.userId);
+  }
 }

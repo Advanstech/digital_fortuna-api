@@ -25,21 +25,10 @@ export const POSTGRES_CLIENT = 'POSTGRES_CLIENT';
           idle_timeout: 20, // Close idle connections after 20s
           connect_timeout: 10, // Connection timeout
           prepare: false, // Disable prepared statements for connection pooling compatibility
-          ssl: configService.get<string>('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+          // Only force SSL behaviour when configured; otherwise honour the URL's sslmode (e.g. Neon requires SSL)
+          ...(configService.get<string>('DB_SSL') === 'true' ? { ssl: { rejectUnauthorized: false } } : {}),
           onnotice: () => {}, // Suppress NOTICE messages
           debug: configService.get<string>('DB_DEBUG') === 'true',
-          types: {
-            // Optimize date parsing
-            date: {
-              to: 1184, // timestamptz
-              from: [1082, 1114, 1184], // date, timestamp, timestamptz
-              serialize: (x: string | Date) => {
-                const date = x instanceof Date ? x : new Date(x);
-                return date.toISOString();
-              },
-              parse: (x: string) => new Date(x),
-            },
-          },
         });
       },
     },

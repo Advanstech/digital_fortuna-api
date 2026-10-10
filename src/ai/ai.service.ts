@@ -177,4 +177,29 @@ export class AiService {
     });
     return JSON.parse(response.text!);
   }
+
+  async generateLegalDocument(deal: any, listing: any, documentType: 'loi' | 'apa') {
+    const docName = documentType === 'loi' ? 'Letter of Intent (LOI)' : 'Asset Purchase Agreement (APA)';
+    const prompt = `You are an M&A attorney drafting a ${docName} for the acquisition of a software business on the Digital Fortuna marketplace.
+
+Listing: ${JSON.stringify(listing)}
+Deal: ${JSON.stringify({ agreedPrice: deal.agreedPrice, buyerId: deal.buyerId, sellerId: deal.sellerId, status: deal.status })}
+
+Draft a professional ${docName} covering: parties (use placeholder names like [Buyer Legal Name]), purchase price and payment structure (escrow), assets included (code, IP, domains, accounts, customer data), due diligence and inspection period, representations and warranties, transition/handover services, non-compete terms, governing law, and signature blocks. Keep it plain-language, practical, and clearly marked as a template requiring legal review.
+
+Return ONLY a JSON object:
+{
+  "title": "string",
+  "documentType": "${documentType}",
+  "markdown": "the full document in markdown",
+  "disclaimer": "string"
+}`;
+
+    const response = await this.ai.models.generateContent({
+      model: 'gemini-2.5-pro',
+      contents: prompt,
+      config: { temperature: 0.3, responseMimeType: 'application/json' },
+    });
+    return JSON.parse(response.text!);
+  }
 }

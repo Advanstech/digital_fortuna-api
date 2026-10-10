@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsNumber, IsOptional, IsBoolean, IsJSON, MinLength, MaxLength, IsUrl, IsInt } from 'class-validator';
+import { IsString, IsEnum, IsNumber, IsOptional, IsBoolean, IsJSON, MinLength, MaxLength, IsUrl, IsInt, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { listingCategoryEnum, listingStatusEnum } from '../../db/schema';
 
@@ -23,11 +23,12 @@ export enum ListingStatus {
 }
 
 export class CreateListingDto {
-  @ApiProperty({ example: 'my-awesome-saas', description: 'Unique URL slug' })
+  @ApiPropertyOptional({ example: 'my-awesome-saas', description: 'Unique URL slug (auto-generated from title when omitted)' })
+  @IsOptional()
   @IsString()
   @MinLength(3)
   @MaxLength(100)
-  slug!: string;
+  slug?: string;
 
   @ApiProperty({ example: 'My Awesome SaaS', description: 'Listing title' })
   @IsString()
@@ -83,6 +84,10 @@ export class CreateListingDto {
   @IsOptional()
   @IsUrl()
   repoUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Rich sales collateral: highlights, metrics, benefits, relevance, growth, images' })
+  @IsOptional()
+  details?: Record<string, any>;
 }
 
 export class UpdateListingDto {
@@ -110,6 +115,10 @@ export class UpdateListingDto {
   @IsOptional()
   @IsInt()
   acquisitionPrice?: number;
+
+  @ApiPropertyOptional({ description: 'Rich sales collateral update' })
+  @IsOptional()
+  details?: Record<string, any>;
 }
 
 export class ListingFilterDto {
@@ -133,13 +142,41 @@ export class ListingFilterDto {
   @IsInt()
   maxPrice?: number;
 
+  @ApiPropertyOptional({ description: 'Minimum monthly recurring revenue' })
+  @IsOptional()
+  @IsInt()
+  minMrr?: number;
+
+  @ApiPropertyOptional({ description: 'Full-text search over title, tagline and description' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  search?: string;
+
+  @ApiPropertyOptional({ enum: ['newest', 'price-asc', 'price-desc', 'mrr-desc'] })
+  @IsOptional()
+  @IsString()
+  sort?: string;
+
+  @ApiPropertyOptional({ description: 'Only featured listings' })
+  @IsOptional()
+  @IsBoolean()
+  featured?: boolean;
+
+  @ApiPropertyOptional({ description: 'Filter by seller user id' })
+  @IsOptional()
+  @IsString()
+  sellerId?: string;
+
   @ApiPropertyOptional({ description: 'Page number', default: 1 })
   @IsOptional()
   @IsInt()
+  @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ description: 'Items per page', default: 20 })
+  @ApiPropertyOptional({ description: 'Items per page', default: 20, maximum: 100 })
   @IsOptional()
   @IsInt()
+  @Min(1)
   limit?: number = 20;
 }

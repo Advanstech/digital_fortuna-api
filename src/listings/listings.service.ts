@@ -1,12 +1,14 @@
-import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, Logger, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { DRIZZLE_DB } from '../db/db.module';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../db/schema';
-import { eq, and, desc, asc, sql, count } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, gte, lte, or, ilike, SQL } from 'drizzle-orm';
 import { CacheService } from '../redis/cache.service';
-import { ListingFilterDto, ListingStatus, ListingCategory } from '../common/dto/listing.dto';
+import { ListingFilterDto, ListingStatus, CreateListingDto, UpdateListingDto } from '../common/dto/listing.dto';
 import { createPaginatedResponse, PaginatedResponse } from '../common/dto/pagination.dto';
 import { MailService } from '../mail/mail.service';
+
+const VALID_CATEGORIES = ['saas', 'pos', 'mobile', 'blockchain', 'marketing', 'fintech', 'edtech', 'ecommerce', 'other'] as const;
 
 @Injectable()
 export class ListingsService {
@@ -35,180 +37,269 @@ export class ListingsService {
   }
 
   private async fetchListings(filters?: ListingFilterDto): Promise<PaginatedResponse<any>> {
-    const page = filters?.page || 1;
-    const limit = filters?.limit || 20;
+    const page = Math.max(1, filters?.page || 1);
+    const limit = Math.min(100, Math.max(1, filters?.limit || 20));
     const offset = (page - 1) * limit;
 
-    const mockListings = [
-      {
-        id: "mock-1",
-        sellerId: "user-1",
-        slug: "modernrx-pos",
-        title: "ModernRx POS",
-        tagline: "Pharmacy Point of Sale",
-        description: "A modern POS for pharmacies.",
-        category: "saas",
-        acquisitionPrice: 15000,
-        monthlyLicensePrice: 500,
-        revenueMrr: 1000,
-        revenueArr: 12000,
-        techStack: ["Next.js", "Fastify", "PostgreSQL"],
-        demoUrl: "/images/modernrx.png",
-        repoUrl: "https://github.com/mock",
-        status: "live",
-        featured: true,
-        verified: true,
-        aiScore: 95,
-        createdAt: new Date(),
-        publishedAt: new Date(),
-      },
-      {
-        id: "mock-2",
-        sellerId: "user-2",
-        slug: "fortunaeats-pos",
-        title: "FortunaEats POS",
-        tagline: "Restaurant Point of Sale",
-        description: "A modern POS for restaurants.",
-        category: "saas",
-        acquisitionPrice: 8500,
-        monthlyLicensePrice: 300,
-        revenueMrr: 800,
-        revenueArr: 9600,
-        techStack: ["React Native", "Node.js", "MongoDB"],
-        demoUrl: "/images/fortunaeats.png",
-        repoUrl: "https://github.com/mock",
-        status: "live",
-        featured: false,
-        verified: true,
-        aiScore: 88,
-        createdAt: new Date(),
-        publishedAt: new Date(),
-      }
-    ];
+    const conditions: SQL[] = [];
 
-    let filtered = mockListings;
+    // Public queries only see live listings unless a specific status is requested
+    conditions.push(eq(schema.listings.status, filters?.status || 'live'));
+
     if (filters?.category) {
-      filtered = filtered.filter(l => l.category === filters.category);
+      conditions.push(eq(schema.listings.category, filters.category));
     }
-    if (filters?.status) {
-      filtered = filtered.filter(l => l.status === filters.status);
+    if (filters?.featured) {
+      conditions.push(eq(schema.listings.featured, true));
+    }
+    if (filters?.sellerId) {
+      conditions.push(eq(schema.listings.sellerId, filters.sellerId));
     }
     if (filters?.minPrice !== undefined) {
-      filtered = filtered.filter(l => l.acquisitionPrice >= filters.minPrice! || l.monthlyLicensePrice >= filters.minPrice!);
+      conditions.push(
+        or(
+          gte(schema.listings.acquisitionPrice, filters.minPrice),
+          gte(schema.listings.monthlyLicensePrice, filters.minPrice),
+        )!,
+      );
     }
     if (filters?.maxPrice !== undefined) {
-      filtered = filtered.filter(l => l.acquisitionPrice <= filters.maxPrice! || l.monthlyLicensePrice <= filters.maxPrice!);
+      conditions.push(
+        or(
+          lte(schema.listings.acquisitionPrice, filters.maxPrice),
+          lte(schema.listings.monthlyLicensePrice, filters.maxPrice),
+        )!,
+      );
+    }
+    if (filters?.minMrr !== undefined) {
+      conditions.push(gte(schema.listings.revenueMrr, filters.minMrr));
+    }
+    if (filters?.search) {
+      const term = `%${filters.search}%`;
+      conditions.push(
+        or(
+          ilike(schema.listings.title, term),
+          ilike(schema.listings.tagline, term),
+          ilike(schema.listings.description, term),
+        )!,
+      );
     }
 
-    const total = filtered.length;
-    const paginatedListings = filtered.slice(offset, offset + limit);
+    const where = and(...conditions);
 
-    return createPaginatedResponse(paginatedListings, total, page, limit);
+    const orderBy =
+      filters?.sort === 'price-asc'
+        ? asc(schema.listings.acquisitionPrice)
+        : filters?.sort === 'price-desc'
+          ? desc(schema.listings.acquisitionPrice)
+          : filters?.sort === 'mrr-desc'
+            ? desc(schema.listings.revenueMrr)
+            : desc(schema.listings.createdAt);
+
+    const [rows, totalRows] = await Promise.all([
+      this.db
+        .select()
+        .from(schema.listings)
+        .where(where)
+        .orderBy(desc(schema.listings.featured), orderBy)
+        .limit(limit)
+        .offset(offset),
+      this.db.$count(schema.listings, where),
+    ]);
+
+    return createPaginatedResponse(rows, totalRows || 0, page, limit);
   }
 
-  async findOne(slug: string) {
+  async findOne(slug: string, requesterId?: string) {
     const cacheKey = this.cacheService.generateKey(this.CACHE_PREFIX, 'detail', slug);
 
-    return this.cacheService.getOrSet(
+    const listing = await this.cacheService.getOrSet(
       cacheKey,
-      () => this.fetchListing(slug),
+      async () => {
+        const rows = await this.db
+          .select()
+          .from(schema.listings)
+          .where(eq(schema.listings.slug, slug))
+          .limit(1);
+        return rows[0] || null;
+      },
       this.CACHE_TTL,
     );
-  }
 
-  private async fetchListing(slug: string) {
-    const mockListing = {
-      id: "mock-1",
-      sellerId: "user-1",
-      slug: slug,
-      title: "ModernRx POS",
-      tagline: "Pharmacy Point of Sale",
-      description: "A modern POS for pharmacies.",
-      category: "saas",
-      acquisitionPrice: 15000,
-      monthlyLicensePrice: 500,
-      revenueMrr: 1000,
-      revenueArr: 12000,
-      techStack: ["Next.js", "Fastify", "PostgreSQL"],
-      demoUrl: "/images/modernrx.png",
-      repoUrl: "https://github.com/mock",
-      status: "live",
-      featured: true,
-      verified: true,
-      aiScore: 95,
-      createdAt: new Date(),
-      publishedAt: new Date(),
-    };
-    
-    return mockListing;
+    if (!listing) throw new NotFoundException('Listing not found');
+
+    // Non-live listings are only visible to their owner and admins
+    if (listing.status !== 'live' && listing.sellerId !== requesterId) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    const media = await this.db
+      .select()
+      .from(schema.listingMedia)
+      .where(eq(schema.listingMedia.listingId, listing.id))
+      .orderBy(asc(schema.listingMedia.position));
+
+    return { ...listing, media };
   }
 
   async findById(id: string) {
     const cacheKey = this.cacheService.generateKey(this.CACHE_PREFIX, 'id', id);
 
-    return this.cacheService.getOrSet(
+    const listing = await this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        return {
-          id: id,
-          sellerId: "user-1",
-          slug: "mock-listing",
-          title: "Mocked Listing",
-          tagline: "Pharmacy Point of Sale",
-          description: "A modern POS for pharmacies.",
-          category: "saas",
-          acquisitionPrice: 15000,
-          monthlyLicensePrice: 500,
-          revenueMrr: 1000,
-          revenueArr: 12000,
-          techStack: ["Next.js", "Fastify", "PostgreSQL"],
-          demoUrl: "/images/modernrx.png",
-          repoUrl: "https://github.com/mock",
-          status: "live",
-          featured: true,
-          verified: true,
-          aiScore: 95,
-          createdAt: new Date(),
-          publishedAt: new Date(),
-        };
+        const rows = await this.db
+          .select()
+          .from(schema.listings)
+          .where(eq(schema.listings.id, id))
+          .limit(1);
+        return rows[0] || null;
       },
       this.CACHE_TTL,
     );
+
+    if (!listing) throw new NotFoundException('Listing not found');
+    return listing;
   }
 
-  async createListing(data: any, userId: string) {
-    // Mock the creation of a listing
-    const newListing = {
-      id: "mock-" + Date.now(),
-      sellerId: userId,
-      slug: (data.title || "untitled").toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-      title: data.title,
-      category: data.category,
-      acquisitionPrice: data.acquisitionPrice,
-      status: "draft",
-      createdAt: new Date(),
+  async myListings(userId: string) {
+    return this.db
+      .select()
+      .from(schema.listings)
+      .where(eq(schema.listings.sellerId, userId))
+      .orderBy(desc(schema.listings.createdAt));
+  }
+
+  private slugify(title: string): string {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80);
+  }
+
+  private async uniqueSlug(title: string): Promise<string> {
+    const base = this.slugify(title) || 'listing';
+    let candidate = base;
+    for (let i = 1; i < 20; i++) {
+      const existing = await this.db
+        .select({ id: schema.listings.id })
+        .from(schema.listings)
+        .where(eq(schema.listings.slug, candidate))
+        .limit(1);
+      if (!existing.length) return candidate;
+      candidate = `${base}-${i + 1}`;
+    }
+    return `${base}-${Date.now()}`;
+  }
+
+  private normalizeCategory(category?: string): (typeof VALID_CATEGORIES)[number] {
+    if (category && (VALID_CATEGORIES as readonly string[]).includes(category)) {
+      return category as (typeof VALID_CATEGORIES)[number];
+    }
+    return 'other';
+  }
+
+  async createListing(data: CreateListingDto & { contactEmail?: string }, userId: string) {
+    const slug = data.slug ? await this.uniqueSlug(data.slug) : await this.uniqueSlug(data.title);
+
+    let techStack: any = data.techStack;
+    if (typeof techStack === 'string') {
+      techStack = techStack.split(',').map((s: string) => s.trim()).filter(Boolean);
+    }
+
+    const inserted = await this.db
+      .insert(schema.listings)
+      .values({
+        sellerId: userId,
+        slug,
+        title: data.title,
+        tagline: data.tagline,
+        description: data.description,
+        category: this.normalizeCategory(data.category as string),
+        acquisitionPrice: data.acquisitionPrice,
+        monthlyLicensePrice: data.monthlyLicensePrice,
+        revenueMrr: data.revenueMrr,
+        revenueArr: data.revenueArr,
+        techStack,
+        demoUrl: data.demoUrl,
+        repoUrl: data.repoUrl,
+        details: data.details,
+        status: 'review',
+      })
+      .returning();
+
+    await this.invalidateCache();
+
+    const recipientEmail = data.contactEmail;
+    if (recipientEmail) {
+      await this.mailService.sendListingCreatedEmail(recipientEmail, data.title).catch((err) => {
+        this.logger.error(`Failed to send listing creation email: ${err.message}`);
+      });
+    }
+
+    return inserted[0];
+  }
+
+  async updateListing(id: string, data: UpdateListingDto, userId: string, role?: string) {
+    const listing = await this.findById(id);
+
+    if (listing.sellerId !== userId && role !== 'admin' && role !== 'super_admin') {
+      throw new ForbiddenException('You do not own this listing');
+    }
+
+    const updates: Record<string, any> = {};
+    if (data.title !== undefined) updates.title = data.title;
+    if (data.tagline !== undefined) updates.tagline = data.tagline;
+    if (data.description !== undefined) updates.description = data.description;
+    if (data.acquisitionPrice !== undefined) updates.acquisitionPrice = data.acquisitionPrice;
+    if (data.details !== undefined) {
+      updates.details = { ...((listing.details as Record<string, any>) || {}), ...data.details };
+    }
+
+    if (data.status !== undefined) {
+      this.assertValidListingTransition(listing.status, data.status);
+      updates.status = data.status;
+      if (data.status === 'live' && !listing.publishedAt) {
+        updates.publishedAt = new Date();
+      }
+    }
+
+    if (!Object.keys(updates).length) {
+      throw new BadRequestException('Nothing to update');
+    }
+
+    const updated = await this.db
+      .update(schema.listings)
+      .set(updates)
+      .where(eq(schema.listings.id, id))
+      .returning();
+
+    await this.invalidateCache(id, listing.slug);
+    return updated[0];
+  }
+
+  private assertValidListingTransition(from: string, to: string) {
+    const allowed: Record<string, string[]> = {
+      draft: ['review', 'archived'],
+      review: ['draft', 'live', 'archived'],
+      live: ['sold', 'archived'],
+      sold: ['archived'],
+      archived: ['draft'],
     };
-
-    // Send email notification using Resend
-    // We would normally look up the user's email based on userId here,
-    // but for this mock implementation, we use a placeholder or data.contactEmail if provided.
-    const recipientEmail = data.contactEmail || 'founder@example.com';
-    await this.mailService.sendListingCreatedEmail(recipientEmail, data.title).catch(err => {
-      this.logger.error(`Failed to send listing creation email: ${err.message}`);
-    });
-
-    return newListing;
+    if (!allowed[from]?.includes(to)) {
+      throw new BadRequestException(`Cannot move listing from '${from}' to '${to}'`);
+    }
   }
 
   async invalidateCache(listingId?: string, slug?: string): Promise<void> {
-    // Invalidate list cache
     await this.cacheService.deletePattern(`${this.CACHE_PREFIX}:list:*`);
-    
-    // Invalidate specific listing caches
+
     if (listingId) {
       await this.cacheService.delete(this.cacheService.generateKey(this.CACHE_PREFIX, 'id', listingId));
     }
-    
+
     if (slug) {
       await this.cacheService.delete(this.cacheService.generateKey(this.CACHE_PREFIX, 'detail', slug));
     }

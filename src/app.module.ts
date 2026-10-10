@@ -10,6 +10,7 @@ import { ListingsModule } from './listings/listings.module';
 import { AiModule } from './ai/ai.module';
 import { PaymentsModule } from './payments/payments.module';
 import { DealsModule } from './deals/deals.module';
+import { OffersModule } from './offers/offers.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { BrokersModule } from './brokers/brokers.module';
 import { RedisModule } from './redis/redis.module';
@@ -50,6 +51,7 @@ import { MailModule } from './mail/mail.module';
     AiModule,
     PaymentsModule,
     DealsModule,
+    OffersModule,
     InvoicesModule,
     BrokersModule,
     HealthModule,

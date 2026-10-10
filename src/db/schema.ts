@@ -50,6 +50,8 @@ export const listings = pgTable('listings', {
   techStack: jsonb('tech_stack'),
   demoUrl: text('demo_url'),
   repoUrl: text('repo_url'),
+  // Rich sales collateral: highlights[], metrics[{label,value,icon}], benefits[{title,desc}], relevance, growth[]
+  details: jsonb('details'),
   status: listingStatusEnum('status').default('draft').notNull(),
   featured: boolean('featured').default(false),
   verified: boolean('verified').default(false),
