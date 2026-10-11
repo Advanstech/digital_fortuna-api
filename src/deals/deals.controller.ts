@@ -2,6 +2,7 @@ import { Controller, Post, Get, Body, Param, UseGuards, Request, Patch, ParseUUI
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { DealsService } from './deals.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
+import { KycGuard } from '../auth/kyc.guard';
 import { IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 
 class CreateDealDto {
@@ -37,6 +38,7 @@ class GenerateDocumentDto {
 export class DealsController {
   constructor(private readonly dealsService: DealsService) {}
 
+  @UseGuards(KycGuard)
   @Post()
   @ApiOperation({ summary: 'Open a deal room on a live listing' })
   createDeal(@Request() req: any, @Body() body: CreateDealDto) {

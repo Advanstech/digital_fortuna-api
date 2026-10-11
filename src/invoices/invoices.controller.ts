@@ -1,6 +1,7 @@
 import { Controller, Post, Get, Body, Param, UseGuards, Request, Patch } from '@nestjs/common';
 import { InvoicesService } from './invoices.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
+import { KycGuard } from '../auth/kyc.guard';
 
 @UseGuards(JwtAuthGuard)
 @Controller('invoices')
@@ -17,6 +18,7 @@ export class InvoicesController {
     return this.invoicesService.getDealInvoices(dealId);
   }
 
+  @UseGuards(KycGuard)
   @Post(':id/pay')
   processPaymentIntent(@Param('id') id: string) {
     return this.invoicesService.processPaymentIntent(id);

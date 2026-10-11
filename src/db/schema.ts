@@ -33,6 +33,7 @@ export const profiles = pgTable('profiles', {
   verified: boolean('verified').default(false),
   location: text('location'),
   socialLinks: jsonb('social_links'),
+  kycData: jsonb('kyc_data'),
 });
 
 export const listings = pgTable('listings', {

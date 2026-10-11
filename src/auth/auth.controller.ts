@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, Res, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Patch, Body, Param, UseGuards, Request, Get, Res, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './auth.guard';
@@ -7,7 +7,11 @@ import {
   CreateUserDto, 
   LoginDto, 
   RefreshTokenDto, 
-  TwoFactorVerifyDto 
+  TwoFactorVerifyDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  KycSubmitDto,
+  UpdateProfileDto
 } from '../common/dto/user.dto';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../common/decorators/public.decorator';
@@ -38,6 +42,27 @@ export class AuthController {
   async login(@Body() body: LoginDto) {
     const user = await this.authService.validateUser(body.email, body.password);
     return this.authService.login(user);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @Throttle({ auth: { limit: 3, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request a password reset email' })
+  @ApiResponse({ status: 200, description: 'Reset email sent if account exists' })
+  async forgotPassword(@Body() body: ForgotPasswordDto) {
+    return this.authService.forgotPassword(body.email);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @Throttle({ auth: { limit: 5, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password using token' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  async resetPassword(@Body() body: ResetPasswordDto) {
+    return this.authService.resetPassword(body.token, body.password);
   }
 
   @Public()
@@ -100,6 +125,16 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
+  @Patch('profile')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated' })
+  updateProfile(@Request() req: any, @Body() body: UpdateProfileDto) {
+    return this.authService.updateProfile(req.user.userId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @Get('me')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get current user record' })
@@ -116,5 +151,33 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Logged out' })
   logout(@Request() req: any) {
     return this.authService.logout(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @Post('kyc/submit')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Submit KYC information' })
+  @ApiResponse({ status: 200, description: 'KYC submitted successfully' })
+  submitKyc(@Request() req: any, @Body() body: KycSubmitDto) {
+    return this.authService.submitKyc(req.user.userId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @Get('admin/users')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Admin list all users and KYC data' })
+  adminGetUsers() {
+    return this.authService.adminGetUsers();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @Patch('admin/users/:id/kyc')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Admin approve or reject KYC' })
+  adminUpdateKyc(@Param('id') id: string, @Body() body: { status: string }) {
+    return this.authService.adminUpdateKycStatus(id, body.status);
   }
 }

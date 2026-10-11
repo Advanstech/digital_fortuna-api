@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards, ParseUUIDPipe, Post, Body, Request, Patch } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards, ParseUUIDPipe, Post, Body, Request, Patch, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { ListingsService } from './listings.service';
 import { ListingFilterDto, CreateListingDto, UpdateListingDto } from '../common/dto/listing.dto';
@@ -92,6 +92,7 @@ export class ListingsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @Patch(':id')
   @ApiOperation({ summary: 'Update a listing (owner or admin)' })
@@ -103,5 +104,18 @@ export class ListingsController {
     @Request() req: any,
   ) {
     return this.listingsService.updateListing(id, body, req.user.userId, req.user.role);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a listing (owner or admin)' })
+  @ApiResponse({ status: 200, description: 'Listing deleted' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async deleteListing(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: any,
+  ) {
+    return this.listingsService.deleteListing(id, req.user.userId, req.user.role);
   }
 }

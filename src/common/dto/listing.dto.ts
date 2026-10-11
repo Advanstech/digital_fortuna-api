@@ -111,10 +111,42 @@ export class UpdateListingDto {
   @IsEnum(ListingStatus)
   status?: ListingStatus;
 
+  @ApiPropertyOptional({ enum: ListingCategory })
+  @IsOptional()
+  @IsEnum(ListingCategory)
+  category?: ListingCategory;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
   acquisitionPrice?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  monthlyLicensePrice?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  revenueMrr?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  revenueArr?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  techStack?: any;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  demoUrl?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  repoUrl?: string;
 
   @ApiPropertyOptional({ description: 'Rich sales collateral update' })
   @IsOptional()
@@ -122,10 +154,10 @@ export class UpdateListingDto {
 }
 
 export class ListingFilterDto {
-  @ApiPropertyOptional({ enum: ListingCategory })
+  @ApiPropertyOptional({ description: 'Category filter or search keyword' })
   @IsOptional()
-  @IsEnum(ListingCategory)
-  category?: ListingCategory;
+  @IsString()
+  category?: string;
 
   @ApiPropertyOptional({ enum: ListingStatus })
   @IsOptional()

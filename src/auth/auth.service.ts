@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { DRIZZLE_DB } from '../db/db.module';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
 import { generateSecret, generateURI, verify } from 'otplib';
@@ -60,6 +60,57 @@ export class AuthService {
     return this.login(user);
   }
 
+  async forgotPassword(email: string) {
+    const users = await this.db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.email, email.toLowerCase()))
+      .limit(1);
+
+    if (!users.length) {
+      // Do not reveal that the user does not exist
+      this.logger.log(`Password reset requested for non-existent email: ${email}`);
+      return { message: 'If that email address is in our database, we will send you an email to reset your password.' };
+    }
+
+    const payload = { email: email.toLowerCase(), type: 'reset-password' };
+    const resetToken = this.jwtService.sign(payload, { expiresIn: '1h' });
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetLink = `${frontendUrl}/auth/reset-password?token=${resetToken}`;
+
+    this.logger.log(`=================================================`);
+    this.logger.log(`PASSWORD RESET LINK: ${resetLink}`);
+    this.logger.log(`=================================================`);
+
+    await this.mailService.sendPasswordResetEmail(email.toLowerCase(), resetLink).catch((err) => {
+      this.logger.warn(`Password reset email failed: ${err.message}`);
+    });
+
+    return { message: 'If that email address is in our database, we will send you an email to reset your password.' };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(token);
+    } catch (e) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    if (payload.type !== 'reset-password' || !payload.email) {
+      throw new BadRequestException('Invalid reset token');
+    }
+
+    const hashed = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+    await this.db
+      .update(schema.users)
+      .set({ password: hashed })
+      .where(eq(schema.users.email, payload.email));
+
+    return { message: 'Password has been successfully reset' };
+  }
+
   async validateUser(email: string, pass: string): Promise<any> {
     const users = await this.db
       .select()
@@ -73,6 +124,7 @@ export class AuthService {
 
     const user = users[0];
     const valid = await bcrypt.compare(pass, user.password);
+    console.log(`Login attempt for ${email}: password length is ${pass.length}, password is '${pass}', valid: ${valid}`);
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -144,7 +196,7 @@ export class AuthService {
   }
 
   async getMe(userId: string) {
-    const users = await this.db
+    const records = await this.db
       .select({
         id: schema.users.id,
         email: schema.users.email,
@@ -153,13 +205,73 @@ export class AuthService {
         subscriptionTier: schema.users.subscriptionTier,
         isTwoFactorEnabled: schema.users.isTwoFactorEnabled,
         createdAt: schema.users.createdAt,
+        kycData: schema.profiles.kycData,
+        displayName: schema.profiles.displayName,
+        companyName: schema.profiles.companyName,
       })
       .from(schema.users)
+      .leftJoin(schema.profiles, eq(schema.users.id, schema.profiles.userId))
       .where(eq(schema.users.id, userId))
       .limit(1);
 
-    if (!users.length) throw new UnauthorizedException('User not found');
-    return users[0];
+    if (!records.length) throw new UnauthorizedException('User not found');
+    return records[0];
+  }
+
+  async updateProfile(userId: string, data: any) {
+    const updateData: any = {};
+    if (data.displayName !== undefined) updateData.displayName = data.displayName;
+    if (data.companyName !== undefined) updateData.companyName = data.companyName;
+    
+    if (Object.keys(updateData).length > 0) {
+      await this.db
+        .insert(schema.profiles)
+        .values({ userId, ...updateData })
+        .onConflictDoUpdate({ target: schema.profiles.userId, set: updateData });
+    }
+    
+    return { success: true };
+  }
+
+  async submitKyc(userId: string, data: any) {
+    const updateData = { kycData: { ...data, submittedAt: new Date().toISOString() } };
+    await this.db
+      .insert(schema.profiles)
+      .values({ userId, ...updateData })
+      .onConflictDoUpdate({ target: schema.profiles.userId, set: updateData });
+
+    await this.db
+      .update(schema.users)
+      .set({ kycStatus: 'pending' })
+      .where(eq(schema.users.id, userId));
+
+    return { message: 'KYC submitted successfully', status: 'pending' };
+  }
+
+  async adminGetUsers() {
+    return this.db
+      .select({
+        id: schema.users.id,
+        email: schema.users.email,
+        role: schema.users.role,
+        kycStatus: schema.users.kycStatus,
+        subscriptionTier: schema.users.subscriptionTier,
+        createdAt: schema.users.createdAt,
+        displayName: schema.profiles.displayName,
+        companyName: schema.profiles.companyName,
+        kycData: schema.profiles.kycData,
+      })
+      .from(schema.users)
+      .leftJoin(schema.profiles, eq(schema.users.id, schema.profiles.userId))
+      .orderBy(desc(schema.users.createdAt));
+  }
+
+  async adminUpdateKycStatus(userId: string, status: string) {
+    await this.db
+      .update(schema.users)
+      .set({ kycStatus: status })
+      .where(eq(schema.users.id, userId));
+    return { success: true, userId, status };
   }
 
   async generateTwoFactorSecret(userId: string) {

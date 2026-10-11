@@ -47,7 +47,18 @@ export class ListingsService {
     conditions.push(eq(schema.listings.status, filters?.status || 'live'));
 
     if (filters?.category) {
-      conditions.push(eq(schema.listings.category, filters.category));
+      if ((VALID_CATEGORIES as readonly string[]).includes(filters.category)) {
+        conditions.push(eq(schema.listings.category, filters.category as any));
+      } else {
+        const catTerm = `%${filters.category}%`;
+        conditions.push(
+          or(
+            ilike(schema.listings.title, catTerm),
+            ilike(schema.listings.tagline, catTerm),
+            ilike(schema.listings.description, catTerm),
+          )!,
+        );
+      }
     }
     if (filters?.featured) {
       conditions.push(eq(schema.listings.featured, true));
@@ -112,14 +123,19 @@ export class ListingsService {
 
   async findOne(slug: string, requesterId?: string) {
     const cacheKey = this.cacheService.generateKey(this.CACHE_PREFIX, 'detail', slug);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
 
     const listing = await this.cacheService.getOrSet(
       cacheKey,
       async () => {
+        const query = isUuid
+          ? or(eq(schema.listings.slug, slug), eq(schema.listings.id, slug))!
+          : eq(schema.listings.slug, slug);
+
         const rows = await this.db
           .select()
           .from(schema.listings)
-          .where(eq(schema.listings.slug, slug))
+          .where(query)
           .limit(1);
         return rows[0] || null;
       },
@@ -254,12 +270,25 @@ export class ListingsService {
     if (data.tagline !== undefined) updates.tagline = data.tagline;
     if (data.description !== undefined) updates.description = data.description;
     if (data.acquisitionPrice !== undefined) updates.acquisitionPrice = data.acquisitionPrice;
+    if (data.monthlyLicensePrice !== undefined) updates.monthlyLicensePrice = data.monthlyLicensePrice;
+    if (data.revenueMrr !== undefined) updates.revenueMrr = data.revenueMrr;
+    if (data.revenueArr !== undefined) updates.revenueArr = data.revenueArr;
+    if (data.category !== undefined) updates.category = this.normalizeCategory(data.category as string);
+    if (data.techStack !== undefined) {
+      updates.techStack = typeof data.techStack === 'string'
+        ? data.techStack.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : data.techStack;
+    }
+    if (data.demoUrl !== undefined) updates.demoUrl = data.demoUrl;
+    if (data.repoUrl !== undefined) updates.repoUrl = data.repoUrl;
     if (data.details !== undefined) {
       updates.details = { ...((listing.details as Record<string, any>) || {}), ...data.details };
     }
 
     if (data.status !== undefined) {
-      this.assertValidListingTransition(listing.status, data.status);
+      if (role !== 'admin' && role !== 'super_admin') {
+        this.assertValidListingTransition(listing.status, data.status);
+      }
       updates.status = data.status;
       if (data.status === 'live' && !listing.publishedAt) {
         updates.publishedAt = new Date();
@@ -278,6 +307,18 @@ export class ListingsService {
 
     await this.invalidateCache(id, listing.slug);
     return updated[0];
+  }
+
+  async deleteListing(id: string, userId: string, role?: string) {
+    const listing = await this.findById(id);
+
+    if (listing.sellerId !== userId && role !== 'admin' && role !== 'super_admin') {
+      throw new ForbiddenException('You do not own this listing');
+    }
+
+    await this.db.delete(schema.listings).where(eq(schema.listings.id, id));
+    await this.invalidateCache(id, listing.slug);
+    return { success: true, id };
   }
 
   private assertValidListingTransition(from: string, to: string) {

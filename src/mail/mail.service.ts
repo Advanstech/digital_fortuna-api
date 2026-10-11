@@ -82,4 +82,21 @@ export class MailService {
     `;
     return this.sendEmail(to, subject, html);
   }
+
+  async sendPasswordResetEmail(to: string, resetLink: string) {
+    const subject = 'Reset your Digital Fortuna Password';
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b;">
+        <h2 style="color: #0A0F1E;">Password Reset Request</h2>
+        <p>We received a request to reset your password. If you didn't make this request, you can safely ignore this email.</p>
+        <p>Click the link below to set a new password:</p>
+        <p><a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #0080FF; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a></p>
+        <p>Or copy and paste this URL into your browser:</p>
+        <p>${resetLink}</p>
+        <br />
+        <p>Best regards,<br/><strong>The Digital Fortuna Team</strong></p>
+      </div>
+    `;
+    return this.sendEmail(to, subject, html);
+  }
 }

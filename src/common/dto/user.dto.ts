@@ -1,5 +1,5 @@
 import { IsEmail, IsString, MinLength, IsEnum, IsOptional, IsUUID } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum UserRole {
   BUYER = 'buyer',
@@ -51,8 +51,50 @@ export class TwoFactorVerifyDto {
   @ApiProperty({ example: '123456', description: '6-digit TOTP code' })
   @IsString()
   @MinLength(6)
-  @MinLength(6)
   authCode!: string;
+}
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'user@example.com', description: 'User email address' })
+  @IsEmail({}, { message: 'Please provide a valid email address' })
+  email!: string;
+}
+
+export class KycSubmitDto {
+  @ApiProperty({ description: 'ID Type e.g., passport, drivers_license' })
+  @IsString()
+  idType!: string;
+
+  @ApiProperty({ description: 'ID Number' })
+  @IsString()
+  idNumber!: string;
+
+  @ApiProperty({ description: 'URL of the ID document' })
+  @IsString()
+  documentUrl!: string;
+}
+
+export class UpdateProfileDto {
+  @ApiPropertyOptional({ description: 'User full name' })
+  @IsString()
+  @IsOptional()
+  displayName?: string;
+
+  @ApiPropertyOptional({ description: 'Company name' })
+  @IsString()
+  @IsOptional()
+  companyName?: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty({ description: 'The JWT reset token sent via email' })
+  @IsString()
+  token!: string;
+
+  @ApiProperty({ example: 'StrongP@ssw0rd123', description: 'New user password (min 8 characters)' })
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  password!: string;
 }
 
 export class UserResponseDto {

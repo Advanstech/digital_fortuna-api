@@ -320,7 +320,18 @@ async function main() {
     if (existing.length) {
       await db
         .update(schema.listings)
-        .set({ details: l.details })
+        .set({ 
+          details: l.details,
+          description: l.description,
+          title: l.title,
+          tagline: l.tagline,
+          category: l.category,
+          acquisitionPrice: l.acquisitionPrice,
+          revenueMrr: l.revenueMrr,
+          revenueArr: l.revenueArr,
+          demoUrl: l.demoUrl,
+          monthlyLicensePrice: (l as any).monthlyLicensePrice
+        })
         .where(eq(schema.listings.id, existing[0].id));
       console.log(`  updated details for ${l.slug}`);
       continue;

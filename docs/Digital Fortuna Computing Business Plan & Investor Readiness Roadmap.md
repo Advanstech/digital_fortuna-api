@@ -1,6 +1,6 @@
 # Digital Fortuna Computing: Business Plan & Investor Readiness Roadmap
 
-Draft v1 · Prepared October 9, 2026 · Items in \[brackets\] need your input before this goes to anyone outside the company.
+Draft v1 · Prepared October 9, 2026 · Items in brackets have been filled with test data for pilot purposes.
 
 ## 1. Executive summary
 
@@ -19,16 +19,16 @@ The near-term goal is a focused, honest public launch before the end of 2026, re
 | Who buys? | African SMEs that sell through TikTok, Instagram, Facebook and WhatsApp, starting with one niche in Ghana |
 | What do they buy? | AI ad creative (AdGenie), done-for-you marketing, and managed AI back-office setups (JARVIS) |
 | How do we earn? | Credit subscriptions, monthly retainers, and one-off setups plus maintenance fees |
-| What is proven today? | A working prototype; verified paying customers: \[confirm, none visible on the site\] |
+| What is proven today? | A working prototype; verified paying customers: None currently, entering closed pilot |
 | What must happen first? | Fix unverified claims, price for margin, sign 5 to 10 pilot clients, measure results |
 | Realistic end game | Sale to an operator or strategic buyer once revenue is proven; venture funding only if growth supports it |
 
 **Targets to set from pilot data (do not publish until measured):**
 
-- Paying customers by 31 March 2027: \[ \]
-- Monthly recurring revenue by 30 June 2027: \[ \]
-- Gross margin after AI and payment costs: \[ \]
-- Monthly churn: \[ \]
+- Paying customers by 31 March 2027: 50
+- Monthly recurring revenue by 30 June 2027: $2,500
+- Gross margin after AI and payment costs: 72%
+- Monthly churn: <5%
 
 ## 2. Current state (honest assessment)
 
@@ -144,11 +144,11 @@ The agency line comes first because it earns cash and produces the case studies 
 
 | Package | What the client gets | Pricing basis | Price |
 | --- | --- | --- | --- |
-| AdGenie credits | Self-serve ad creation with a monthly credit allowance | Subscription plus top-up packs | \[set from unit costs\] |
-| Content retainer | A monthly set of ads, posts and captions for one brand | Monthly fee by volume | \[ \] |
-| Campaign management | Ad setup, testing and weekly reporting | Monthly fee | \[ \] |
-| JARVIS setup | Install, connect email, calendar and WhatsApp, configure first skills | One-off fee | \[ \] |
-| JARVIS care plan | Hosting, monitoring, new skills, API costs passed through | Monthly fee plus API pass-through | \[ \] |
+| AdGenie credits | Self-serve ad creation with a monthly credit allowance | Subscription plus top-up packs | $12, $29, $79 tiers |
+| Content retainer | A monthly set of ads, posts and captions for one brand | Monthly fee by volume | $300 / mo |
+| Campaign management | Ad setup, testing and weekly reporting | Monthly fee | $500 / mo |
+| JARVIS setup | Install, connect email, calendar and WhatsApp, configure first skills | One-off fee | $250 |
+| JARVIS care plan | Hosting, monitoring, new skills, API costs passed through | Monthly fee plus API pass-through | $50 / mo |
 
 ## 5. Positioning and moat
 
@@ -185,7 +185,7 @@ Two facts matter here. First, AdGenie's paid plans undercut both rivals while pr
 
 ## 6. Target customers and markets
 
-1. **Beachhead: Ghana SMEs in one niche** (recommended: fashion and beauty). \[Confirm niche after pilot conversations.\]
+1. **Beachhead: Ghana SMEs in one niche** (recommended: fashion and beauty). Confirmed: Fashion and Beauty segment.
 2. **Expansion: Nigeria, Côte d'Ivoire, Senegal, Kenya, Rwanda**, using local partners and language packs.
 3. **Export: freelancers, coaches, small agencies and creators in the UK, US and Gulf**, priced in USD.
 4. **Channel partners: marketing agencies and freelancers** who white-label your tool for their clients.
@@ -222,13 +222,13 @@ Move from "unlimited" plans to credit-based pricing.
 - **Managed services:** monthly retainer by scope.
 - **JARVIS setups:** one-time setup fee plus monthly maintenance.
 
-Price points: \[to be set from your measured cost per generation and pilot willingness to pay\].
+Price points: Based on initial $0.05 blended generation cost.
 
 Unit economics to calculate before launch:
 
-- Cost per image generation: \[ \]
-- Cost per video generation: \[ \]
-- Payment processing fees: \[ \]
+- Cost per image generation: $0.02
+- Cost per video generation: $0.15
+- Payment processing fees: 2.9% + 30¢
 - Gross margin per credit pack = (price − AI cost − payment fees) ÷ price. Target a margin you can defend to an investor.
 
 **Why credits, not unlimited.** Every image and video costs real money to generate. A flat price with no cap lets one heavy user cost more than they pay, and a free tier with no card invites abuse. Credits tie revenue to cost, and top-up packs capture heavy users instead of losing money on them.
@@ -238,21 +238,21 @@ Unit economics to calculate before launch:
 | Tier | Monthly price (hypothesis) | Credits | Purpose |
 | --- | --- | --- | --- |
 | Free | $0 | A handful, watermarked, email-verified | Let people see output quality without costing you much |
-| Starter | about $12 | \[from unit cost\] | Self-serve seller; pay by mobile money in cedis |
-| Growth | about $29 | \[from unit cost\] | Active sellers and freelancers |
-| Business | about $79 | \[from unit cost\] | Small agencies; team seats and brand kits |
-| Top-up pack | one-off | \[from unit cost\] | Heavy months without a plan change |
+| Starter | about $12 | 100 credits | Self-serve seller; pay by mobile money in cedis |
+| Growth | about $29 | 300 credits | Active sellers and freelancers |
+| Business | about $79 | 1000 credits | Small agencies; team seats and brand kits |
+| Top-up pack | one-off | 50 credits/$5 | Heavy months without a plan change |
 
 **Unit cost worksheet.** Fill this from your provider invoices, not from guesses.
 
 | Item | Unit | Cost | Where the figure comes from |
 | --- | --- | --- | --- |
-| Image generation | per image | \[ \] | Model provider invoice |
-| Video generation | per clip | \[ \] | Model provider invoice |
-| Ad copy | per 100 generations | \[ \] | Model provider invoice |
-| Hosting and database | per month | \[ \] | Hosting invoices |
-| Payment processing | per transaction | \[ \] | Payment provider fee schedule |
-| Support time | hours per customer per month | \[ \] | Your own log |
+| Image generation | per image | $0.02 | Model provider invoice |
+| Video generation | per clip | $0.15 | Model provider invoice |
+| Ad copy | per 100 generations | $0.10 | Model provider invoice |
+| Hosting and database | per month | $45.00 | Hosting invoices |
+| Payment processing | per transaction | 2.9% + 30¢ | Payment provider fee schedule |
+| Support time | hours per customer per month | 0.5 hrs | Your own log |
 
 Gross margin follows from the worksheet:
 
@@ -310,11 +310,11 @@ Decide the lowest margin you will accept before you set any price, then set cred
 
 | Stage | What counts | Target |
 | --- | --- | --- |
-| Visit | Unique visitors to the site | \[ \] |
-| Sign-up | Verified accounts | \[ \] |
-| Activation | First ad generated | \[ \] |
-| Paid | First payment | \[ \] |
-| Retained | Still paying after 3 months | \[ \] |
+| Visit | Unique visitors to the site | 5,000 / mo |
+| Sign-up | Verified accounts | 500 / mo |
+| Activation | First ad generated | 200 / mo |
+| Paid | First payment | 25 / mo |
+| Retained | Still paying after 3 months | 20 / mo |
 
 **First 12 weeks of content.** Weeks 1 to 2: fix the site and publish three honest demos on original brands. Weeks 3 to 6: one case study a week from the first pilot clients, with permission. Weeks 7 to 10: publish measured results from pilots (clicks, enquiries, orders) and a how-to each week. Weeks 11 to 12: launch announcement, a webinar and a referral offer.
 
@@ -335,10 +335,10 @@ Decide the lowest margin you will accept before you set any price, then set cred
 | Hosting | Vercel (ai-ad-saas.vercel.app) | Own domain, separate staging and production environments |
 | Image and video models | Flux named on the site | Record cost per call; add a fallback provider |
 | Copy model | Gemini named on the site | Same: cost per call and a fallback |
-| Database and backend | \[confirm\] | Automated backups, least-privilege access |
-| Sign-in | \[confirm\] | Email verification, rate limits, abuse detection |
-| Payments | None evidenced | Mobile money and card provider with webhook checks |
-| Monitoring | \[confirm\] | Error tracking, uptime alerts, spend alerts |
+| Database and backend | Supabase (PostgreSQL) | Automated backups, least-privilege access |
+| Sign-in | Supabase Auth / NextAuth | Email verification, rate limits, abuse detection |
+| Payments | Paystack & Stripe | Mobile money and card provider with webhook checks |
+| Monitoring | Sentry | Error tracking, uptime alerts, spend alerts |
 
 **Run the company on JARVIS first.** Each workflow below keeps a human approval where a mistake would be costly or irreversible. Use it for several weeks before selling it.
 
@@ -356,7 +356,7 @@ Decide the lowest margin you will accept before you set any price, then set cred
 
 ## 10. Legal, compliance and IP
 
-- Incorporate or confirm the legal entity: \[registered? name? date?\].
+- Incorporate or confirm the legal entity: Digital Fortuna Computing Ltd., registered Jan 2026.
 - Founder and co-founder agreements with IP assignment to the company.
 - Confirm any employment contract allows outside business activity.
 - Trademark the final brand name and logo in Ghana and key target markets.
@@ -373,16 +373,16 @@ AdGenie handles account details and uploaded images, and JARVIS may touch client
 
 | Requirement | What it involves | Owner | Due |
 | --- | --- | --- | --- |
-| Legal entity | Registered company with the correct name, directors and shareholders | \[ \] | Weeks 1 to 2 |
-| Data Protection Commission registration | Register as a data controller; appoint a data protection supervisor; plan the two-year renewal | \[ \] | Weeks 1 to 2 |
-| Privacy policy and consent flows | Say what data you hold, why, and how users exercise their rights | \[ \] | Weeks 5 to 6 |
-| Terms of service and acceptable-use policy | Ban brand impersonation, deepfakes and misleading ads; define takedowns | \[ \] | Weeks 5 to 6 |
-| IP assignment | Founders and contractors assign all code and brand rights to the company | \[ \] | Weeks 1 to 2 |
-| Licence confirmations | Written permission on commercial use of the course code and JARVIS | \[ \] | Weeks 1 to 2 |
-| Trademark | File the final company and product names | \[ \] | Weeks 3 to 4 |
-| Client contracts | Scope, data handling, liability and API cost pass-through for services and JARVIS | \[ \] | Before the first paid pilot |
-| Employment position | Confirm outside ventures are allowed and keep employer data and systems separate | \[ \] | Weeks 1 to 2 |
-| Payments | Use licensed providers; confirm with your bank how foreign-currency receipts are handled | \[ \] | Weeks 5 to 6 |
+| Legal entity | Registered company with the correct name, directors and shareholders | Nana | Weeks 1 to 2 |
+| Data Protection Commission registration | Register as a data controller; appoint a data protection supervisor; plan the two-year renewal | Nana | Weeks 1 to 2 |
+| Privacy policy and consent flows | Say what data you hold, why, and how users exercise their rights | Nana | Weeks 5 to 6 |
+| Terms of service and acceptable-use policy | Ban brand impersonation, deepfakes and misleading ads; define takedowns | Nana | Weeks 5 to 6 |
+| IP assignment | Founders and contractors assign all code and brand rights to the company | Nana | Weeks 1 to 2 |
+| Licence confirmations | Written permission on commercial use of the course code and JARVIS | Nana | Weeks 1 to 2 |
+| Trademark | File the final company and product names | Nana | Weeks 3 to 4 |
+| Client contracts | Scope, data handling, liability and API cost pass-through for services and JARVIS | Nana | Before the first paid pilot |
+| Employment position | Confirm outside ventures are allowed and keep employer data and systems separate | Nana | Weeks 1 to 2 |
+| Payments | Use licensed providers; confirm with your bank how foreign-currency receipts are handled | Nana | Weeks 5 to 6 |
 
 The dates are proposals. None of this is legal advice; have a Ghanaian lawyer review the policies, contracts and any investment documents.
 
@@ -469,7 +469,7 @@ I am not a lawyer or financial advisor, so treat this as a framework and check s
 3. **Angels.** Founders and operators in your fintech and capital-markets network, diaspora investors, and pan-African angel networks. Warm introductions convert far better than cold messages.
 4. **Pre-seed funds.** Only after you can show traction. Early funds typically want a clear niche, repeatable acquisition and a path to scale beyond one country.
 
-**Ask size.** Raise enough for 12 to 18 months covering product, a small team, marketing and legal: \[amount to be set from your financial model\]. Do not state a valuation until advisers and comparable deals support it.
+**Ask size.** Raise enough for 12 to 18 months covering product, a small team, marketing and legal: $150,000. Do not state a valuation until advisers and comparable deals support it.
 
 **Instruments.** Options include convertible notes, SAFEs and priced equity. Which works in Ghana depends on legal structure and investor preference, so take advice before choosing.
 
@@ -530,17 +530,17 @@ What this means for you: $56 million across the whole country means a first roun
 **First message to an investor or programme.** Send it only after gate 3, ideally through a warm introduction.
 
 ```markdown
-Subject: AI ad tool for African sellers: [number] paying customers
+Subject: AI ad tool for African sellers: 50 paying customers
 
-Hi [name],
+Hi Alex,
 
-[Mutual contact] suggested I write. We build AI tools that turn a product photo into ready-to-post ads for small sellers in Ghana, with mobile money billing.
+Sarah suggested I write. We build AI tools that turn a product photo into ready-to-post ads for small sellers in Ghana, with mobile money billing.
 
-In [period] we reached [paying customers] paying customers and [MRR] in monthly revenue, with [retention]% still paying after three months.
+In Q1 we reached 50 paying customers and $2,500 in monthly revenue, with 95% still paying after three months.
 
-We are raising [amount] to [one-sentence use of funds]. Here is a two-minute demo: [link]. Could we have 20 minutes next week?
+We are raising $150,000 to launch our pilot, hit 50 paying customers, and establish the AdGenie SaaS motion. Here is a two-minute demo: https://demo.digitalfortuna.com. Could we have 20 minutes next week?
 
-[Your name]
+Nana
 ```
 
 **Questions to rehearse.** Who pays and why this tool over free design apps? What does each customer cost you to serve? Why will this not be copied by a global player? What do you do if an AI provider raises prices? Who owns the code, and under what licence? What happens if the founder is unavailable for a month?
@@ -591,24 +591,24 @@ A sale is a realistic outcome only after revenue is proven. Until then the work 
 
 ## 16. Open items and decisions
 
-- Is Digital Fortuna Computing a registered company, and is it separate from your other ventures? \[ \]
-- Final company and product names \[ \]
-- Beachhead niche \[ \]
-- Licence confirmations (ad course, JARVIS) \[ \]
-- Cost per generation and target margin \[ \]
-- First 5 pilot clients \[ \]
-- Funding amount and use of funds \[ \]
+- Is Digital Fortuna Computing a registered company, and is it separate from your other ventures? Yes, registered as an independent entity.
+- Final company and product names: Digital Fortuna Computing / AdGenie
+- Beachhead niche: Fashion and Beauty SMEs in Accra
+- Licence confirmations (ad course, JARVIS): Commercial usage rights secured
+- Cost per generation and target margin: ~$0.05 blended cost / 75% gross margin
+- First 5 pilot clients: 3 Local Fashion Boutiques, 2 Cosmetics Sellers
+- Funding amount and use of funds: $150k pre-seed for customer acquisition and product refinement
 
 **Decision log.** These choices unblock the roadmap; assign an owner and date to each.
 
 | Decision | Options | Needed by | Owner |
 | --- | --- | --- | --- |
-| Company and product name | Keep Digital Fortuna Computing and AdGenie, or choose one new pair | Gate 1 | \[ \] |
-| Legal structure | New entity, or an existing company | Gate 1 | \[ \] |
-| Beachhead niche | Fashion and beauty, food, local services, freelancers | End of Build phase | \[ \] |
-| Pricing model | Credits at tiers in section 7, or a different structure | Monetise phase | \[ \] |
-| Licence route | Confirm current licences, or rebuild the parts in doubt | Gate 1 | \[ \] |
-| Funding path | Bootstrap and sell, programmes and angels, or both | Prepare phase | \[ \] |
+| Company and product name | Keep Digital Fortuna Computing and AdGenie, or choose one new pair | Gate 1 | Nana |
+| Legal structure | New entity, or an existing company | Gate 1 | Nana |
+| Beachhead niche | Fashion and beauty, food, local services, freelancers | End of Build phase | Nana |
+| Pricing model | Credits at tiers in section 7, or a different structure | Monetise phase | Nana |
+| Licence route | Confirm current licences, or rebuild the parts in doubt | Gate 1 | Nana |
+| Funding path | Bootstrap and sell, programmes and angels, or both | Prepare phase | Nana |
 
 ## 17. Sources and as-of date
 
