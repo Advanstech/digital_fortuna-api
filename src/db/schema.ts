@@ -10,6 +10,8 @@ export const dealStatusEnum = pgEnum('deal_status', ['negotiation', 'loi_signed'
 export const invoiceStatusEnum = pgEnum('invoice_status', ['pending', 'paid', 'released', 'refunded']);
 export const documentTypeEnum = pgEnum('document_type', ['loi', 'apa', 'due_diligence', 'nda', 'dd_checklist', 'escrow_agreement']);
 export const reportTypeEnum = pgEnum('report_type', ['cim', 'valuation', 'pnl']);
+export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'completed', 'failed', 'unknown', 'refunded']);
+export const paymentPurposeEnum = pgEnum('payment_purpose', ['escrow_deposit', 'listing_fee', 'success_fee', 'buyer_subscription', 'refund', 'escrow_release', 'other']);
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -240,6 +242,64 @@ export const dealDocuments = pgTable('deal_documents', {
   sellerSignedAt: timestamp('seller_signed_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// ── GTPay Payments ────────────────────────────────────────────────────────
+export const gtpayPayments = pgTable('gtpay_payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  dealId: uuid('deal_id').references(() => deals.id),
+  listingId: uuid('listing_id').references(() => listings.id),
+  partnerTransId: text('partner_trans_id').unique().notNull(),
+  gtbTransId: text('gtb_trans_id'),
+  providerTransId: text('provider_trans_id'),
+  serviceName: text('service_name').notNull(), // creditwallet, debitwallet, banktrf
+  serviceNumber: text('service_number').notNull(),
+  secondaryServiceNumber: text('secondary_service_number'),
+  amount: integer('amount').notNull(), // amount in pesewas (GHS x 100)
+  currency: text('currency').default('GHS').notNull(),
+  purpose: paymentPurposeEnum('purpose').notNull(),
+  status: paymentStatusEnum('status').default('pending').notNull(),
+  gtbStatus: text('gtb_status'), // raw GTBank status: PENDING, COMPLETED, FAILED
+  paidBy: text('paid_by').notNull(),
+  payeeName: text('payee_name'),
+  remarks: text('remarks'),
+  callbackReceived: boolean('callback_received').default(false),
+  recoveredAfterTimeout: boolean('recovered_after_timeout').default(false),
+  metadata: jsonb('metadata'), // store full GTBank response
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+});
+
+// ── Escrow Ledger ────────────────────────────────────────────────────────
+export const escrowLedger = pgTable('escrow_ledger', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dealId: uuid('deal_id').references(() => deals.id).notNull(),
+  paymentId: uuid('payment_id').references(() => gtpayPayments.id),
+  entryType: text('entry_type').notNull(), // deposit, release, refund, fee_deduction
+  amount: integer('amount').notNull(), // pesewas
+  currency: text('currency').default('GHS').notNull(),
+  fromUserId: uuid('from_user_id').references(() => users.id),
+  toUserId: uuid('to_user_id').references(() => users.id),
+  description: text('description'),
+  balanceAfter: integer('balance_after'), // running escrow balance for this deal
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// ── Marketplace Fees ─────────────────────────────────────────────────────
+export const marketplaceFees = pgTable('marketplace_fees', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dealId: uuid('deal_id').references(() => deals.id),
+  listingId: uuid('listing_id').references(() => listings.id),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  feeType: text('fee_type').notNull(), // listing_fee, success_fee, buyer_subscription
+  amount: integer('amount').notNull(), // pesewas
+  currency: text('currency').default('GHS').notNull(),
+  paymentId: uuid('payment_id').references(() => gtpayPayments.id),
+  status: text('status').default('pending').notNull(), // pending, paid, waived
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  paidAt: timestamp('paid_at'),
 });
 
 // ── Platform Analytics / Admin ────────────────────────────────────────────
