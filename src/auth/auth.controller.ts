@@ -194,4 +194,24 @@ export class AuthController {
   adminUpdateRole(@Param('id') id: string, @Body() body: { role: string }) {
     return this.authService.adminUpdateRole(id, body.role);
   }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
+  @ApiBearerAuth('JWT-auth')
+  @Get('admin/users/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Admin get full user detail with listings and offers' })
+  adminGetUserDetail(@Param('id') id: string) {
+    return this.authService.adminGetUserDetail(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
+  @ApiBearerAuth('JWT-auth')
+  @Patch('admin/users/:id/profile')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Admin edit user profile data' })
+  adminUpdateProfile(@Param('id') id: string, @Body() body: any) {
+    return this.authService.adminUpdateUserProfile(id, body);
+  }
 }

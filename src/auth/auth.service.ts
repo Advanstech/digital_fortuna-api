@@ -266,6 +266,21 @@ export class AuthService {
       .set(userUpdate)
       .where(eq(schema.users.id, userId));
 
+    // Send confirmation email
+    const userRecord = await this.db
+      .select({ email: schema.users.email, displayName: schema.profiles.displayName })
+      .from(schema.users)
+      .leftJoin(schema.profiles, eq(schema.users.id, schema.profiles.userId))
+      .where(eq(schema.users.id, userId))
+      .limit(1);
+
+    if (userRecord.length) {
+      const name = data.fullLegalName || userRecord[0].displayName || userRecord[0].email.split('@')[0];
+      this.mailService.sendKycSubmittedEmail(userRecord[0].email, name).catch((err) => {
+        this.logger.warn(`KYC submission email failed: ${err.message}`);
+      });
+    }
+
     return { message: 'KYC submitted successfully', status: 'pending' };
   }
 
@@ -309,6 +324,28 @@ export class AuthService {
       .update(schema.users)
       .set(updateData)
       .where(eq(schema.users.id, userId));
+
+    // Send KYC status notification email
+    const userRecord = await this.db
+      .select({ email: schema.users.email, displayName: schema.profiles.displayName, fullLegalName: schema.profiles.fullLegalName })
+      .from(schema.users)
+      .leftJoin(schema.profiles, eq(schema.users.id, schema.profiles.userId))
+      .where(eq(schema.users.id, userId))
+      .limit(1);
+
+    if (userRecord.length) {
+      const name = userRecord[0].fullLegalName || userRecord[0].displayName || userRecord[0].email.split('@')[0];
+      if (status === 'verified') {
+        this.mailService.sendKycApprovedEmail(userRecord[0].email, name).catch((err) => {
+          this.logger.warn(`KYC approved email failed: ${err.message}`);
+        });
+      } else if (status === 'rejected' && reason) {
+        this.mailService.sendKycRejectedEmail(userRecord[0].email, name, reason).catch((err) => {
+          this.logger.warn(`KYC rejected email failed: ${err.message}`);
+        });
+      }
+    }
+
     return { success: true, userId, status };
   }
 
@@ -322,6 +359,98 @@ export class AuthService {
       .set({ role: role as any })
       .where(eq(schema.users.id, userId));
     return { success: true, userId, role };
+  }
+
+  async adminUpdateUserProfile(userId: string, data: any) {
+    const userUpdate: Record<string, any> = {};
+    const profileUpdate: Record<string, any> = {};
+
+    if (data.country !== undefined) userUpdate.country = data.country;
+    if (data.subscriptionTier !== undefined) userUpdate.subscriptionTier = data.subscriptionTier;
+
+    if (data.displayName !== undefined) profileUpdate.displayName = data.displayName;
+    if (data.fullLegalName !== undefined) profileUpdate.fullLegalName = data.fullLegalName;
+    if (data.companyName !== undefined) profileUpdate.companyName = data.companyName;
+    if (data.nationality !== undefined) profileUpdate.nationality = data.nationality;
+    if (data.dateOfBirth !== undefined) profileUpdate.dateOfBirth = data.dateOfBirth;
+    if (data.phone !== undefined) profileUpdate.phone = data.phone;
+
+    if (Object.keys(userUpdate).length > 0) {
+      await this.db.update(schema.users).set(userUpdate).where(eq(schema.users.id, userId));
+    }
+    if (Object.keys(profileUpdate).length > 0) {
+      await this.db
+        .insert(schema.profiles)
+        .values({ userId, ...profileUpdate })
+        .onConflictDoUpdate({ target: schema.profiles.userId, set: profileUpdate });
+    }
+
+    return { success: true, userId };
+  }
+
+  async adminGetUserDetail(userId: string) {
+    const records = await this.db
+      .select({
+        id: schema.users.id,
+        email: schema.users.email,
+        role: schema.users.role,
+        kycStatus: schema.users.kycStatus,
+        kycRejectionReason: schema.users.kycRejectionReason,
+        country: schema.users.country,
+        subscriptionTier: schema.users.subscriptionTier,
+        isTwoFactorEnabled: schema.users.isTwoFactorEnabled,
+        createdAt: schema.users.createdAt,
+        kycData: schema.profiles.kycData,
+        displayName: schema.profiles.displayName,
+        fullLegalName: schema.profiles.fullLegalName,
+        companyName: schema.profiles.companyName,
+        nationality: schema.profiles.nationality,
+        dateOfBirth: schema.profiles.dateOfBirth,
+        phone: schema.profiles.phone,
+        avatarUrl: schema.profiles.avatarUrl,
+        bio: schema.profiles.bio,
+        location: schema.profiles.location,
+      })
+      .from(schema.users)
+      .leftJoin(schema.profiles, eq(schema.users.id, schema.profiles.userId))
+      .where(eq(schema.users.id, userId))
+      .limit(1);
+
+    if (!records.length) throw new BadRequestException('User not found');
+
+    // Get user's listings
+    const userListings = await this.db
+      .select({
+        id: schema.listings.id,
+        title: schema.listings.title,
+        status: schema.listings.status,
+        category: schema.listings.category,
+        acquisitionPrice: schema.listings.acquisitionPrice,
+        createdAt: schema.listings.createdAt,
+      })
+      .from(schema.listings)
+      .where(eq(schema.listings.sellerId, userId))
+      .orderBy(desc(schema.listings.createdAt));
+
+    // Get user's offers
+    const userOffers = await this.db
+      .select({
+        id: schema.offers.id,
+        amount: schema.offers.amount,
+        status: schema.offers.status,
+        createdAt: schema.offers.createdAt,
+        listingTitle: schema.listings.title,
+      })
+      .from(schema.offers)
+      .leftJoin(schema.listings, eq(schema.offers.listingId, schema.listings.id))
+      .where(eq(schema.offers.buyerId, userId))
+      .orderBy(desc(schema.offers.createdAt));
+
+    return {
+      ...records[0],
+      listings: userListings,
+      offers: userOffers,
+    };
   }
 
   async generateTwoFactorSecret(userId: string) {

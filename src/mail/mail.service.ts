@@ -83,6 +83,90 @@ export class MailService {
     return this.sendEmail(to, subject, html);
   }
 
+  async sendKycSubmittedEmail(to: string, name: string) {
+    const subject = 'KYC Verification Submitted - Digital Fortuna';
+    const html = `
+      <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #f8fafc; padding: 32px; border-radius: 12px;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h2 style="color: #0A0F1E; margin: 0;">Identity Verification Received</h2>
+        </div>
+        <p>Dear ${name},</p>
+        <p>We have received your KYC (Know Your Customer) verification documents. Our compliance team will review your submission within <strong>1-3 business days</strong>.</p>
+        <div style="background: #e0f2fe; border-left: 4px solid #0080FF; padding: 16px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px;"><strong>What happens next?</strong></p>
+          <ul style="margin: 8px 0 0; padding-left: 20px; font-size: 14px;">
+            <li>Our team reviews your identity documents</li>
+            <li>We verify the information against our compliance requirements</li>
+            <li>You will receive an email notification once the review is complete</li>
+          </ul>
+        </div>
+        <p>You can check your verification status at any time from your dashboard.</p>
+        <br />
+        <p>Best regards,<br/><strong>Digital Fortuna Compliance Team</strong></p>
+      </div>
+    `;
+    return this.sendEmail(to, subject, html);
+  }
+
+  async sendKycApprovedEmail(to: string, name: string) {
+    const subject = 'KYC Verified - You Are Approved! - Digital Fortuna';
+    const html = `
+      <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #f8fafc; padding: 32px; border-radius: 12px;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <div style="display: inline-block; background: #dcfce7; border-radius: 50%; padding: 16px; margin-bottom: 12px;">
+            <span style="font-size: 32px;">&#9989;</span>
+          </div>
+          <h2 style="color: #166534; margin: 0;">Identity Verified Successfully</h2>
+        </div>
+        <p>Dear ${name},</p>
+        <p>Congratulations! Your KYC verification has been <strong>approved</strong>. Your account is now fully verified on Digital Fortuna.</p>
+        <div style="background: #dcfce7; border-left: 4px solid #16a34a; padding: 16px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px;"><strong>You can now:</strong></p>
+          <ul style="margin: 8px 0 0; padding-left: 20px; font-size: 14px;">
+            <li>Submit and receive acquisition offers</li>
+            <li>Access deal rooms and escrow services</li>
+            <li>Generate and sign transaction documents (NDA, LOI, APA)</li>
+            <li>Participate in due diligence processes</li>
+          </ul>
+        </div>
+        <p>Visit your <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" style="color: #0080FF; text-decoration: underline;">dashboard</a> to get started.</p>
+        <br />
+        <p>Best regards,<br/><strong>Digital Fortuna Compliance Team</strong></p>
+      </div>
+    `;
+    return this.sendEmail(to, subject, html);
+  }
+
+  async sendKycRejectedEmail(to: string, name: string, reason: string) {
+    const subject = 'KYC Verification Update - Action Required - Digital Fortuna';
+    const html = `
+      <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #f8fafc; padding: 32px; border-radius: 12px;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <div style="display: inline-block; background: #fee2e2; border-radius: 50%; padding: 16px; margin-bottom: 12px;">
+            <span style="font-size: 32px;">&#10060;</span>
+          </div>
+          <h2 style="color: #991b1b; margin: 0;">Verification Not Approved</h2>
+        </div>
+        <p>Dear ${name},</p>
+        <p>Unfortunately, your KYC verification could not be approved at this time.</p>
+        <div style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 16px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0 0 8px; font-size: 14px; font-weight: bold;">Reason:</p>
+          <p style="margin: 0; font-size: 14px;">${reason}</p>
+        </div>
+        <p><strong>What you can do:</strong></p>
+        <ul style="font-size: 14px; padding-left: 20px;">
+          <li>Review the reason above and correct any issues</li>
+          <li>Ensure your ID document is clear, valid, and not expired</li>
+          <li>Re-submit your verification from your <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" style="color: #0080FF;">dashboard</a></li>
+        </ul>
+        <p>If you believe this is an error, please contact our support team.</p>
+        <br />
+        <p>Best regards,<br/><strong>Digital Fortuna Compliance Team</strong></p>
+      </div>
+    `;
+    return this.sendEmail(to, subject, html);
+  }
+
   async sendPasswordResetEmail(to: string, resetLink: string) {
     const subject = 'Reset your Digital Fortuna Password';
     const html = `
