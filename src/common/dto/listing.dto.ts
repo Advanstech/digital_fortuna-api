@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsEnum, IsNumber, IsOptional, IsBoolean, IsJSON, MinLength, MaxLength, IsUrl, IsInt, Min } from 'class-validator';
+import { IsString, IsEmail, IsEnum, IsNumber, IsOptional, IsBoolean, IsJSON, MinLength, MaxLength, IsUrl, IsInt, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { listingCategoryEnum, listingStatusEnum } from '../../db/schema';
 
@@ -20,6 +20,24 @@ export enum ListingStatus {
   LIVE = 'live',
   SOLD = 'sold',
   ARCHIVED = 'archived',
+}
+
+export enum BusinessModel {
+  SUBSCRIPTION = 'subscription',
+  ONE_TIME = 'one_time',
+  MARKETPLACE = 'marketplace',
+  ADVERTISING = 'advertising',
+  FREEMIUM = 'freemium',
+  LICENSING = 'licensing',
+  HYBRID = 'hybrid',
+  OTHER = 'other',
+}
+
+export enum GrowthTrend {
+  ACCELERATING = 'accelerating',
+  GROWING = 'growing',
+  STABLE = 'stable',
+  DECLINING = 'declining',
 }
 
 export class CreateListingDto {
@@ -51,6 +69,11 @@ export class CreateListingDto {
   @IsEnum(ListingCategory)
   category!: ListingCategory;
 
+  @ApiPropertyOptional({ enum: BusinessModel, description: 'Revenue model' })
+  @IsOptional()
+  @IsEnum(BusinessModel)
+  businessModel?: BusinessModel;
+
   @ApiPropertyOptional({ example: 50000, description: 'Acquisition price in USD' })
   @IsOptional()
   @IsInt()
@@ -71,6 +94,63 @@ export class CreateListingDto {
   @IsInt()
   revenueArr?: number;
 
+  @ApiPropertyOptional({ example: 5000, description: 'Monthly net profit' })
+  @IsOptional()
+  @IsInt()
+  monthlyProfit?: number;
+
+  @ApiPropertyOptional({ example: 72, description: 'Profit margin percentage (0-100)' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  profitMargin?: number;
+
+  @ApiPropertyOptional({ example: 500, description: 'Number of paying customers' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  customerCount?: number;
+
+  @ApiPropertyOptional({ example: 250, description: 'Monthly churn rate x100 (250 = 2.5%)' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  churnRate?: number;
+
+  @ApiPropertyOptional({ example: 25000, description: 'Monthly website/app traffic' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  trafficMonthly?: number;
+
+  @ApiPropertyOptional({ example: 18, description: 'Business age in months' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  businessAge?: number;
+
+  @ApiPropertyOptional({ example: 3, description: 'Team size (employees + contractors)' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  teamSize?: number;
+
+  @ApiPropertyOptional({ enum: GrowthTrend, description: 'Revenue growth trajectory' })
+  @IsOptional()
+  @IsEnum(GrowthTrend)
+  growthTrend?: GrowthTrend;
+
+  @ApiPropertyOptional({ description: 'Reason for selling the business' })
+  @IsOptional()
+  @IsString()
+  reasonForSelling?: string;
+
+  @ApiPropertyOptional({ description: 'Country where the business is incorporated' })
+  @IsOptional()
+  @IsString()
+  country?: string;
+
   @ApiPropertyOptional({ description: 'Tech stack as JSON object' })
   @IsOptional()
   techStack?: Record<string, any>;
@@ -88,6 +168,10 @@ export class CreateListingDto {
   @ApiPropertyOptional({ description: 'Rich sales collateral: highlights, metrics, benefits, relevance, growth, images' })
   @IsOptional()
   details?: Record<string, any>;
+
+  @ApiPropertyOptional({ description: 'Seller verification documents: P&L, analytics, revenue proof URLs' })
+  @IsOptional()
+  sellerDocuments?: Record<string, any>;
 
   @ApiPropertyOptional({ example: 'owner@example.com', description: 'Contact email for listing notifications' })
   @IsOptional()
@@ -121,6 +205,11 @@ export class UpdateListingDto {
   @IsEnum(ListingCategory)
   category?: ListingCategory;
 
+  @ApiPropertyOptional({ enum: BusinessModel })
+  @IsOptional()
+  @IsEnum(BusinessModel)
+  businessModel?: BusinessModel;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
@@ -143,6 +232,63 @@ export class UpdateListingDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsInt()
+  monthlyProfit?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  profitMargin?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  customerCount?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  churnRate?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  trafficMonthly?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  businessAge?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  teamSize?: number;
+
+  @ApiPropertyOptional({ enum: ['accelerating', 'growing', 'stable', 'declining'] })
+  @IsOptional()
+  @IsString()
+  growthTrend?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  reasonForSelling?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   techStack?: any;
 
   @ApiPropertyOptional()
@@ -156,6 +302,10 @@ export class UpdateListingDto {
   @ApiPropertyOptional({ description: 'Rich sales collateral update' })
   @IsOptional()
   details?: Record<string, any>;
+
+  @ApiPropertyOptional({ description: 'Seller verification documents' })
+  @IsOptional()
+  sellerDocuments?: Record<string, any>;
 }
 
 export class ListingFilterDto {

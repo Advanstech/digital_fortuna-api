@@ -1,8 +1,11 @@
 import { pgTable, uuid, text, timestamp, boolean, jsonb, integer, pgEnum } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', ['buyer', 'seller', 'admin', 'super_admin', 'broker', 'vc', 'legal', 'bank']);
+export const kycStatusEnum = pgEnum('kyc_status', ['unverified', 'pending', 'verified', 'rejected']);
 export const listingStatusEnum = pgEnum('listing_status', ['draft', 'review', 'live', 'sold', 'archived']);
 export const listingCategoryEnum = pgEnum('listing_category', ['saas', 'pos', 'mobile', 'blockchain', 'marketing', 'fintech', 'edtech', 'ecommerce', 'other']);
+export const businessModelEnum = pgEnum('business_model', ['subscription', 'one_time', 'marketplace', 'advertising', 'freemium', 'licensing', 'hybrid', 'other']);
+export const growthTrendEnum = pgEnum('growth_trend', ['accelerating', 'growing', 'stable', 'declining']);
 export const dealStatusEnum = pgEnum('deal_status', ['negotiation', 'loi_signed', 'due_diligence', 'apa_signed', 'escrow', 'closed', 'cancelled']);
 export const invoiceStatusEnum = pgEnum('invoice_status', ['pending', 'paid', 'released', 'refunded']);
 export const documentTypeEnum = pgEnum('document_type', ['loi', 'apa', 'due_diligence', 'nda', 'dd_checklist', 'escrow_agreement']);
@@ -13,7 +16,8 @@ export const users = pgTable('users', {
   email: text('email').unique().notNull(),
   password: text('password').notNull(),
   role: userRoleEnum('role').default('buyer').notNull(),
-  kycStatus: text('kyc_status').default('unverified'),
+  kycStatus: kycStatusEnum('kyc_status').default('unverified'),
+  kycRejectionReason: text('kyc_rejection_reason'),
   country: text('country'),
   subscriptionTier: text('subscription_tier').default('free'),
   stripeCustomerId: text('stripe_customer_id'),
@@ -27,9 +31,13 @@ export const users = pgTable('users', {
 export const profiles = pgTable('profiles', {
   userId: uuid('user_id').primaryKey().references(() => users.id),
   displayName: text('display_name'),
+  fullLegalName: text('full_legal_name'),
   avatarUrl: text('avatar_url'),
   bio: text('bio'),
   companyName: text('company_name'),
+  nationality: text('nationality'),
+  dateOfBirth: text('date_of_birth'),
+  phone: text('phone'),
   verified: boolean('verified').default(false),
   location: text('location'),
   socialLinks: jsonb('social_links'),
@@ -44,15 +52,29 @@ export const listings = pgTable('listings', {
   tagline: text('tagline'),
   description: text('description'),
   category: listingCategoryEnum('category').notNull(),
+  businessModel: businessModelEnum('business_model'),
   acquisitionPrice: integer('acquisition_price'),
   monthlyLicensePrice: integer('monthly_license_price'),
   revenueMrr: integer('revenue_mrr'),
   revenueArr: integer('revenue_arr'),
+  monthlyProfit: integer('monthly_profit'),
+  profitMargin: integer('profit_margin'), // percentage 0-100
+  customerCount: integer('customer_count'),
+  churnRate: integer('churn_rate'), // percentage x100 (e.g. 250 = 2.5%)
+  trafficMonthly: integer('traffic_monthly'),
+  businessAge: integer('business_age'), // months since launch
+  teamSize: integer('team_size'),
+  growthTrend: growthTrendEnum('growth_trend'),
+  reasonForSelling: text('reason_for_selling'),
+  country: text('country'), // where the business is incorporated
+  isVerifiedRevenue: boolean('is_verified_revenue').default(false),
   techStack: jsonb('tech_stack'),
   demoUrl: text('demo_url'),
   repoUrl: text('repo_url'),
   // Rich sales collateral: highlights[], metrics[{label,value,icon}], benefits[{title,desc}], relevance, growth[]
   details: jsonb('details'),
+  // Seller documents: P&L, analytics, revenue proof URLs
+  sellerDocuments: jsonb('seller_documents'),
   status: listingStatusEnum('status').default('draft').notNull(),
   featured: boolean('featured').default(false),
   verified: boolean('verified').default(false),

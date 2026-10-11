@@ -202,12 +202,18 @@ export class AuthService {
         email: schema.users.email,
         role: schema.users.role,
         kycStatus: schema.users.kycStatus,
+        kycRejectionReason: schema.users.kycRejectionReason,
+        country: schema.users.country,
         subscriptionTier: schema.users.subscriptionTier,
         isTwoFactorEnabled: schema.users.isTwoFactorEnabled,
         createdAt: schema.users.createdAt,
         kycData: schema.profiles.kycData,
         displayName: schema.profiles.displayName,
+        fullLegalName: schema.profiles.fullLegalName,
         companyName: schema.profiles.companyName,
+        nationality: schema.profiles.nationality,
+        dateOfBirth: schema.profiles.dateOfBirth,
+        phone: schema.profiles.phone,
       })
       .from(schema.users)
       .leftJoin(schema.profiles, eq(schema.users.id, schema.profiles.userId))
@@ -234,15 +240,30 @@ export class AuthService {
   }
 
   async submitKyc(userId: string, data: any) {
-    const updateData = { kycData: { ...data, submittedAt: new Date().toISOString() } };
+    const profileData: any = {
+      kycData: {
+        idType: data.idType,
+        idNumber: data.idNumber,
+        documentUrl: data.documentUrl,
+        submittedAt: new Date().toISOString(),
+      },
+    };
+    if (data.fullLegalName) profileData.fullLegalName = data.fullLegalName;
+    if (data.nationality) profileData.nationality = data.nationality;
+    if (data.dateOfBirth) profileData.dateOfBirth = data.dateOfBirth;
+    if (data.phone) profileData.phone = data.phone;
+
     await this.db
       .insert(schema.profiles)
-      .values({ userId, ...updateData })
-      .onConflictDoUpdate({ target: schema.profiles.userId, set: updateData });
+      .values({ userId, ...profileData })
+      .onConflictDoUpdate({ target: schema.profiles.userId, set: profileData });
+
+    const userUpdate: any = { kycStatus: 'pending' as const, kycRejectionReason: null };
+    if (data.country) userUpdate.country = data.country;
 
     await this.db
       .update(schema.users)
-      .set({ kycStatus: 'pending' })
+      .set(userUpdate)
       .where(eq(schema.users.id, userId));
 
     return { message: 'KYC submitted successfully', status: 'pending' };
@@ -255,10 +276,15 @@ export class AuthService {
         email: schema.users.email,
         role: schema.users.role,
         kycStatus: schema.users.kycStatus,
+        kycRejectionReason: schema.users.kycRejectionReason,
+        country: schema.users.country,
         subscriptionTier: schema.users.subscriptionTier,
         createdAt: schema.users.createdAt,
         displayName: schema.profiles.displayName,
+        fullLegalName: schema.profiles.fullLegalName,
         companyName: schema.profiles.companyName,
+        nationality: schema.profiles.nationality,
+        phone: schema.profiles.phone,
         kycData: schema.profiles.kycData,
       })
       .from(schema.users)
@@ -266,10 +292,22 @@ export class AuthService {
       .orderBy(desc(schema.users.createdAt));
   }
 
-  async adminUpdateKycStatus(userId: string, status: string) {
+  async adminUpdateKycStatus(userId: string, status: string, reason?: string) {
+    const validStatuses = ['unverified', 'pending', 'verified', 'rejected'];
+    if (!validStatuses.includes(status)) {
+      throw new BadRequestException(`Invalid KYC status: ${status}. Must be one of: ${validStatuses.join(', ')}`);
+    }
+
+    const updateData: any = { kycStatus: status as any };
+    if (status === 'rejected' && reason) {
+      updateData.kycRejectionReason = reason;
+    } else if (status === 'verified') {
+      updateData.kycRejectionReason = null;
+    }
+
     await this.db
       .update(schema.users)
-      .set({ kycStatus: status })
+      .set(updateData)
       .where(eq(schema.users.id, userId));
     return { success: true, userId, status };
   }

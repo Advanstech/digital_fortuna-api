@@ -181,8 +181,8 @@ export class AuthController {
   @Patch('admin/users/:id/kyc')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Admin approve or reject KYC' })
-  adminUpdateKyc(@Param('id') id: string, @Body() body: { status: string }) {
-    return this.authService.adminUpdateKycStatus(id, body.status);
+  adminUpdateKyc(@Param('id') id: string, @Body() body: { status: string; reason?: string }) {
+    return this.authService.adminUpdateKycStatus(id, body.status, body.reason);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

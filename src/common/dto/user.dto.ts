@@ -61,13 +61,37 @@ export class ForgotPasswordDto {
 }
 
 export class KycSubmitDto {
-  @ApiProperty({ description: 'ID Type e.g., passport, drivers_license' })
+  @ApiProperty({ description: 'Full legal name as on ID document' })
+  @IsString()
+  fullLegalName!: string;
+
+  @ApiProperty({ description: 'ID Type e.g., passport, national_id, drivers_license' })
   @IsString()
   idType!: string;
 
   @ApiProperty({ description: 'ID Number' })
   @IsString()
   idNumber!: string;
+
+  @ApiPropertyOptional({ description: 'Nationality / Country of Citizenship' })
+  @IsOptional()
+  @IsString()
+  nationality?: string;
+
+  @ApiPropertyOptional({ description: 'Date of birth (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  dateOfBirth?: string;
+
+  @ApiPropertyOptional({ description: 'Country of residence' })
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @ApiPropertyOptional({ description: 'Phone number' })
+  @IsOptional()
+  @IsString()
+  phone?: string;
 
   @ApiProperty({ description: 'URL of the ID document' })
   @IsString()

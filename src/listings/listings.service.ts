@@ -235,14 +235,26 @@ export class ListingsService {
         tagline: data.tagline,
         description: data.description,
         category: this.normalizeCategory(data.category as string),
+        businessModel: data.businessModel as any,
         acquisitionPrice: data.acquisitionPrice,
         monthlyLicensePrice: data.monthlyLicensePrice,
         revenueMrr: data.revenueMrr,
         revenueArr: data.revenueArr,
+        monthlyProfit: data.monthlyProfit,
+        profitMargin: data.profitMargin,
+        customerCount: data.customerCount,
+        churnRate: data.churnRate,
+        trafficMonthly: data.trafficMonthly,
+        businessAge: data.businessAge,
+        teamSize: data.teamSize,
+        growthTrend: data.growthTrend as any,
+        reasonForSelling: data.reasonForSelling,
+        country: data.country,
         techStack,
         demoUrl: data.demoUrl,
         repoUrl: data.repoUrl,
         details: data.details,
+        sellerDocuments: data.sellerDocuments,
         status: 'review',
       })
       .returning();
@@ -274,6 +286,17 @@ export class ListingsService {
     if (data.monthlyLicensePrice !== undefined) updates.monthlyLicensePrice = data.monthlyLicensePrice;
     if (data.revenueMrr !== undefined) updates.revenueMrr = data.revenueMrr;
     if (data.revenueArr !== undefined) updates.revenueArr = data.revenueArr;
+    if (data.monthlyProfit !== undefined) updates.monthlyProfit = data.monthlyProfit;
+    if (data.profitMargin !== undefined) updates.profitMargin = data.profitMargin;
+    if (data.customerCount !== undefined) updates.customerCount = data.customerCount;
+    if (data.churnRate !== undefined) updates.churnRate = data.churnRate;
+    if (data.trafficMonthly !== undefined) updates.trafficMonthly = data.trafficMonthly;
+    if (data.businessAge !== undefined) updates.businessAge = data.businessAge;
+    if (data.teamSize !== undefined) updates.teamSize = data.teamSize;
+    if (data.growthTrend !== undefined) updates.growthTrend = data.growthTrend;
+    if (data.reasonForSelling !== undefined) updates.reasonForSelling = data.reasonForSelling;
+    if (data.country !== undefined) updates.country = data.country;
+    if (data.businessModel !== undefined) updates.businessModel = data.businessModel;
     if (data.category !== undefined) updates.category = this.normalizeCategory(data.category as string);
     if (data.techStack !== undefined) {
       updates.techStack = typeof data.techStack === 'string'
@@ -284,6 +307,9 @@ export class ListingsService {
     if (data.repoUrl !== undefined) updates.repoUrl = data.repoUrl;
     if (data.details !== undefined) {
       updates.details = { ...((listing.details as Record<string, any>) || {}), ...data.details };
+    }
+    if (data.sellerDocuments !== undefined) {
+      updates.sellerDocuments = { ...((listing as any).sellerDocuments || {}), ...data.sellerDocuments };
     }
 
     if (data.status !== undefined) {
