@@ -6,94 +6,79 @@ import * as schema from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 /**
- * GTPay Service — proxies to the GTBank Partner API via the Lidapay gateway.
- * 
+ * GTPay Service — sends requests to the GTBank Partner API
+ * via the AWS EB middleware (GTPAY_API_URL).
+ *
+ * The middleware handles authentication and forwarding to GTBank.
+ * We just follow the spec: /api/v1/gtpay/{services,query,pay,status,banks,callback}
+ *
  * Available services:
  *   - creditwallet: Credit a mobile wallet
  *   - debitwallet: Debit a mobile wallet
  *   - banktrf: Bank transfer (GIP)
- * 
- * Flow:
- *   1. Client calls our /payments/gtpay/* endpoints
- *   2. We persist a payment record, then call the Lidapay GTPay proxy
+ *
+ * Pay flow:
+ *   1. Persist a local payment record (so outcome is always traceable)
+ *   2. POST /api/v1/gtpay/pay with { ServiceDetails, PartnerTransId?, CallbackURL? }
  *   3. GTBank responds PENDING (async) or COMPLETED/FAILED
- *   4. GTBank posts final status to our callback endpoint
- *   5. We reconcile and update the payment record
+ *   4. GTBank POSTs final result to the callback URL
+ *   5. We reconcile and update the local record
  */
 @Injectable()
 export class GtpayService {
   private readonly logger = new Logger(GtpayService.name);
   private readonly baseUrl: string;
-  private accessToken: string | null = null;
-  private tokenExpiry: number = 0;
-
-  // Lidapay gateway credentials
-  private readonly username: string;
-  private readonly password: string;
+  private readonly callbackUrl: string;
 
   constructor(
     private configService: ConfigService,
     @Inject(DRIZZLE_DB) private db: PostgresJsDatabase<typeof schema>,
   ) {
-    this.baseUrl = this.configService.get<string>('GTPAY_API_URL') || 'https://web-production-7b9472.up.railway.app';
-    this.username = this.configService.get<string>('GTPAY_USERNAME') || '';
-    this.password = this.configService.get<string>('GTPAY_PASSWORD') || '';
+    this.baseUrl = this.configService.get<string>('GTPAY_API_URL')!;
+    // The callback URL that GTBank will POST the final status to.
+    // This should point to our own API's callback endpoint.
+    this.callbackUrl = this.configService.get<string>('GTPAY_CALLBACK_URL')
+      || `${this.configService.get<string>('API_PUBLIC_URL') || 'http://localhost:4000'}/v1/payments/gtpay/callback`;
   }
 
-  /** Authenticate with the Lidapay gateway and get a bearer token */
-  private async authenticate(): Promise<string> {
-    if (this.accessToken && Date.now() < this.tokenExpiry) {
-      return this.accessToken;
-    }
+  /**
+   * Send a request to the GTPay middleware.
+   * No auth needed — the middleware handles GTBank authentication.
+   */
+  private async request(path: string, method: string = 'POST', body?: any): Promise<any> {
+    const url = `${this.baseUrl}${path}`;
+    this.logger.debug(`GTPay ${method} ${path}`);
 
     try {
-      const res = await fetch(`${this.baseUrl}/api/v1/users/login`, {
-        method: 'POST',
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: this.username,
-          password: this.password,
-        }),
+        body: body ? JSON.stringify(body) : undefined,
       });
 
+      const json = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        this.logger.error('GTPay auth failed', err);
-        throw new InternalServerErrorException('Payment gateway authentication failed');
+        this.logger.warn(`GTPay ${path} failed: ${res.status}`, json);
+
+        // 504 = PAYMENT_STATUS_UNKNOWN — include PartnerTransId so caller
+        // can query /status before retrying (avoid double-payment)
+        if (res.status === 504) {
+          throw new InternalServerErrorException({
+            message: json.message || 'PAYMENT_STATUS_UNKNOWN — query /status before retrying',
+            partnerTransId: json.PartnerTransId || body?.PartnerTransId,
+          });
+        }
+
+        throw new BadRequestException(json.message || `GTPay request failed: ${res.status}`);
       }
 
-      const data = await res.json();
-      this.accessToken = data.access_token;
-      // Refresh 5 minutes before expiry (tokens typically last 1 hour)
-      this.tokenExpiry = Date.now() + 50 * 60 * 1000;
-      return this.accessToken!;
+      return json;
     } catch (err: any) {
-      if (err instanceof InternalServerErrorException) throw err;
-      this.logger.error('GTPay auth error', err.message);
+      if (err instanceof BadRequestException || err instanceof InternalServerErrorException) throw err;
+      this.logger.error(`GTPay ${path} network error`, err.message);
       throw new InternalServerErrorException('Payment gateway unavailable');
     }
-  }
-
-  private async request(path: string, method: string = 'POST', body?: any): Promise<any> {
-    const token = await this.authenticate();
-
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-
-    const json = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      this.logger.warn(`GTPay ${path} failed: ${res.status}`, json);
-      throw new BadRequestException(json.message || `GTPay request failed: ${res.status}`);
-    }
-
-    return json;
   }
 
   /** Generate a unique PartnerTransId (max 20 numeric chars) */
@@ -103,12 +88,15 @@ export class GtpayService {
 
   // ── Public API Methods ─────────────────────────────────────────────────
 
-  /** List available GTPay services */
+  /** POST /api/v1/gtpay/services — list available services */
   async getServices(): Promise<any> {
     return this.request('/api/v1/gtpay/services');
   }
 
-  /** Query / verify account details */
+  /**
+   * POST /api/v1/gtpay/query — query/verify customer details or account balance.
+   * Required: ServiceName. Optional: ServiceNumber, SecondaryServiceNumber.
+   */
   async query(serviceName: string, serviceNumber?: string, secondaryServiceNumber?: string): Promise<any> {
     return this.request('/api/v1/gtpay/query', 'POST', {
       ServiceName: serviceName,
@@ -117,31 +105,35 @@ export class GtpayService {
     });
   }
 
-  /** Get list of supported banks */
+  /** POST /api/v1/gtpay/banks — list supported banks for banktrf */
   async getBanks(): Promise<any> {
     return this.request('/api/v1/gtpay/banks', 'POST');
   }
 
-  /** Check payment status by PartnerTransId */
+  /**
+   * POST /api/v1/gtpay/status — check payment status.
+   * Required: PartnerTransId.
+   * Also reconciles our local record.
+   */
   async getStatus(partnerTransId: string): Promise<any> {
     const result = await this.request('/api/v1/gtpay/status', 'POST', {
       PartnerTransId: partnerTransId,
     });
 
-    // Also update our local record
+    // Reconcile our local record with the authoritative status
     await this.reconcilePayment(partnerTransId, result.data || result);
 
     return result;
   }
 
   /**
-   * Initiate a payment and persist the record.
-   * 
-   * @param userId - The DFC user making the payment
-   * @param purpose - Why this payment is being made
-   * @param serviceDetails - GTPay ServiceDetails object
-   * @param dealId - Optional deal this payment is for
-   * @param listingId - Optional listing this payment is for
+   * POST /api/v1/gtpay/pay — initiate a payment.
+   *
+   * Per the spec:
+   *   Required: ServiceDetails { ServiceName, ServiceNumber, Amount, Remarks, PaidBy }
+   *   Optional: PartnerTransId (auto-gen if omitted), CallbackURL, userId, userName
+   *
+   * We persist a local record BEFORE calling pay so the outcome is always traceable.
    */
   async initiatePayment(params: {
     userId: string;
@@ -149,7 +141,7 @@ export class GtpayService {
     serviceName: string;
     serviceNumber: string;
     secondaryServiceNumber?: string;
-    amount: number; // in GHS (will be sent as string to GTPay)
+    amount: number; // GHS — sent as numeric string to preserve precision
     paidBy: string;
     payeeName?: string;
     remarks: string;
@@ -159,7 +151,7 @@ export class GtpayService {
     const partnerTransId = this.generatePartnerTransId();
     const amountPesewas = Math.round(params.amount * 100);
 
-    // Persist payment record before calling GTPay
+    // 1. Persist payment record before calling GTPay
     const [payment] = await this.db.insert(schema.gtpayPayments).values({
       userId: params.userId,
       dealId: params.dealId || null,
@@ -176,9 +168,11 @@ export class GtpayService {
       remarks: params.remarks,
     }).returning();
 
+    // 2. POST to GTPay /pay per the spec
     try {
       const result = await this.request('/api/v1/gtpay/pay', 'POST', {
         PartnerTransId: partnerTransId,
+        CallbackURL: this.callbackUrl,
         ServiceDetails: {
           ServiceName: params.serviceName,
           ServiceNumber: params.serviceNumber,
@@ -193,7 +187,7 @@ export class GtpayService {
       const gtbData = result.data || result;
       const gtbStatus = gtbData.Status || 'PENDING';
 
-      // Update record with GTBank response
+      // 3. Update record with GTBank response
       await this.db.update(schema.gtpayPayments)
         .set({
           gtbTransId: gtbData.GTBTransId || null,
@@ -213,16 +207,18 @@ export class GtpayService {
         gtbTransId: gtbData.GTBTransId,
         status: this.mapGtbStatus(gtbStatus),
         gtbStatus,
+        data: gtbData.Data, // Network, Charge, TotalAmount
         amount: params.amount,
         currency: 'GHS',
         purpose: params.purpose,
       };
     } catch (err: any) {
-      // Update payment as failed
+      // Mark payment as failed / unknown
+      const isUnknown = err instanceof InternalServerErrorException;
       await this.db.update(schema.gtpayPayments)
         .set({
-          status: 'failed',
-          gtbStatus: 'ERROR',
+          status: isUnknown ? 'unknown' : 'failed',
+          gtbStatus: isUnknown ? 'PAYMENT_STATUS_UNKNOWN' : 'ERROR',
           metadata: { error: err.message },
           updatedAt: new Date(),
         })
@@ -233,8 +229,12 @@ export class GtpayService {
   }
 
   /**
-   * Handle GTBank callback — reconcile the payment.
-   * The callback is treated as a notification; we verify via /status.
+   * Handle GTBank async callback.
+   *
+   * Per the spec: GTBank POSTs WITHOUT a SecureHash. The callback is treated
+   * as a notification only — the authoritative status is pulled from /status
+   * and persisted. An unsigned or forged callback can therefore never mark
+   * a transaction completed on its own.
    */
   async handleCallback(callbackData: any): Promise<any> {
     const partnerTransId = callbackData.PartnerTransId;
@@ -242,16 +242,16 @@ export class GtpayService {
       throw new BadRequestException('Missing PartnerTransId in callback');
     }
 
-    this.logger.log(`GTPay callback received for ${partnerTransId}: ${callbackData.Status}`);
+    this.logger.log(`GTPay callback for ${partnerTransId}: ${callbackData.Status}`);
 
-    // Verify via status endpoint (authoritative)
+    // Verify via /status (authoritative — never trust callback alone)
     let statusResult;
     try {
       statusResult = await this.request('/api/v1/gtpay/status', 'POST', {
         PartnerTransId: partnerTransId,
       });
     } catch {
-      // If status check fails, use the callback data as-is
+      // If /status fails, use the callback data but flag it
       statusResult = { data: callbackData };
     }
 
@@ -260,7 +260,9 @@ export class GtpayService {
     return { success: true, partnerTransId };
   }
 
-  /** Reconcile a payment record from GTBank status data */
+  // ── Internal helpers ───────────────────────────────────────────────────
+
+  /** Reconcile a local payment record from GTBank status data */
   private async reconcilePayment(partnerTransId: string, gtbData: any, fromCallback = false): Promise<void> {
     const gtbStatus = gtbData.Status || 'PENDING';
     const newStatus = this.mapGtbStatus(gtbStatus);
@@ -282,7 +284,7 @@ export class GtpayService {
       .where(eq(schema.gtpayPayments.partnerTransId, partnerTransId));
   }
 
-  /** Map GTBank status strings to our enum */
+  /** Map GTBank status strings to our payment_status enum */
   private mapGtbStatus(gtbStatus: string): 'pending' | 'completed' | 'failed' | 'unknown' {
     switch (gtbStatus?.toUpperCase()) {
       case 'COMPLETED': return 'completed';
@@ -292,7 +294,8 @@ export class GtpayService {
     }
   }
 
-  /** Get payment by ID */
+  // ── Record lookups ─────────────────────────────────────────────────────
+
   async getPaymentById(paymentId: string) {
     const [payment] = await this.db.select()
       .from(schema.gtpayPayments)
@@ -301,7 +304,6 @@ export class GtpayService {
     return payment || null;
   }
 
-  /** Get payment by PartnerTransId */
   async getPaymentByTransId(partnerTransId: string) {
     const [payment] = await this.db.select()
       .from(schema.gtpayPayments)
@@ -310,7 +312,6 @@ export class GtpayService {
     return payment || null;
   }
 
-  /** Get all payments for a user */
   async getUserPayments(userId: string) {
     return this.db.select()
       .from(schema.gtpayPayments)
@@ -318,7 +319,6 @@ export class GtpayService {
       .orderBy(schema.gtpayPayments.createdAt);
   }
 
-  /** Get all payments for a deal */
   async getDealPayments(dealId: string) {
     return this.db.select()
       .from(schema.gtpayPayments)
