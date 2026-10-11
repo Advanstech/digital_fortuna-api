@@ -110,9 +110,13 @@ export const transactions = pgTable('transactions', {
   escrowStatus: text('escrow_status').notNull(),
   stripePaymentIntentId: text('stripe_payment_intent_id'),
   paystackRef: text('paystack_ref'),
+  gtpayPartnerTransId: text('gtpay_partner_trans_id'),
+  gtpayPaymentId: uuid('gtpay_payment_id'),
   amountUsd: integer('amount_usd').notNull(),
+  amountGhs: integer('amount_ghs'), // amount in pesewas
   feeAmount: integer('fee_amount').notNull(),
   releasedAt: timestamp('released_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const deals = pgTable('deals', {
@@ -142,6 +146,8 @@ export const invoices = pgTable('invoices', {
   description: text('description').notNull(),
   stripePaymentIntentId: text('stripe_payment_intent_id'),
   paystackRef: text('paystack_ref'),
+  gtpayPartnerTransId: text('gtpay_partner_trans_id'),
+  gtpayPaymentId: uuid('gtpay_payment_id'),
   status: invoiceStatusEnum('status').default('pending').notNull(),
   dueDate: timestamp('due_date'),
   paidAt: timestamp('paid_at'),

@@ -59,6 +59,29 @@ export class AdminService {
       .where(eq(schema.invoices.status, 'released'));
     const platformRevenue = Math.round((revenueResult[0]?.total || 0) * 0.08);
 
+    // GTPay transaction stats
+    let totalGtpayPayments = 0;
+    let completedGtpayPayments = 0;
+    let gtpayVolume = 0;
+    let totalFeesCollected = 0;
+    try {
+      totalGtpayPayments = await this.db.$count(schema.gtpayPayments);
+      completedGtpayPayments = await this.db.$count(schema.gtpayPayments, eq(schema.gtpayPayments.status, 'completed'));
+      const volResult = await this.db
+        .select({ total: sql<number>`COALESCE(SUM(${schema.gtpayPayments.amount}), 0)` })
+        .from(schema.gtpayPayments)
+        .where(eq(schema.gtpayPayments.status, 'completed'));
+      gtpayVolume = volResult[0]?.total || 0;
+
+      const feeResult = await this.db
+        .select({ total: sql<number>`COALESCE(SUM(${schema.marketplaceFees.amount}), 0)` })
+        .from(schema.marketplaceFees)
+        .where(eq(schema.marketplaceFees.status, 'paid'));
+      totalFeesCollected = feeResult[0]?.total || 0;
+    } catch {
+      // Tables may not exist yet
+    }
+
     // Listings by status
     const listingsByStatus = await this.db
       .select({
@@ -110,6 +133,10 @@ export class AdminService {
         gmv: gmv || 0,
         escrowBalance: escrowBalance || 0,
         platformRevenue: platformRevenue || 0,
+        totalGtpayPayments,
+        completedGtpayPayments,
+        gtpayVolume,
+        totalFeesCollected,
       },
       listingsByStatus,
       listingsByCategory,
@@ -155,6 +182,47 @@ export class AdminService {
       .limit(50);
 
     return rows;
+  }
+
+  /**
+   * All GTPay transactions — admin overview.
+   */
+  async getAllPayments() {
+    return this.db
+      .select({
+        payment: schema.gtpayPayments,
+        userEmail: schema.users.email,
+      })
+      .from(schema.gtpayPayments)
+      .innerJoin(schema.users, eq(schema.gtpayPayments.userId, schema.users.id))
+      .orderBy(desc(schema.gtpayPayments.createdAt))
+      .limit(200);
+  }
+
+  /**
+   * All marketplace fees — admin overview.
+   */
+  async getAllFees() {
+    return this.db
+      .select({
+        fee: schema.marketplaceFees,
+        userEmail: schema.users.email,
+      })
+      .from(schema.marketplaceFees)
+      .innerJoin(schema.users, eq(schema.marketplaceFees.userId, schema.users.id))
+      .orderBy(desc(schema.marketplaceFees.createdAt))
+      .limit(200);
+  }
+
+  /**
+   * Escrow ledger — all entries across all deals.
+   */
+  async getAllEscrowEntries() {
+    return this.db
+      .select()
+      .from(schema.escrowLedger)
+      .orderBy(desc(schema.escrowLedger.createdAt))
+      .limit(200);
   }
 
   /**

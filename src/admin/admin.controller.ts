@@ -30,4 +30,22 @@ export class AdminController {
   getAllDeals() {
     return this.adminService.getAllDeals();
   }
+
+  @Get('payments')
+  @ApiOperation({ summary: 'All GTPay transactions (admin oversight)' })
+  getAllPayments() {
+    return this.adminService.getAllPayments();
+  }
+
+  @Get('fees')
+  @ApiOperation({ summary: 'All marketplace fees (admin oversight)' })
+  getAllFees() {
+    return this.adminService.getAllFees();
+  }
+
+  @Get('escrow-ledger')
+  @ApiOperation({ summary: 'Full escrow ledger across all deals' })
+  getEscrowLedger() {
+    return this.adminService.getAllEscrowEntries();
+  }
 }
