@@ -2,6 +2,8 @@ import { Controller, Post, Patch, Body, Param, UseGuards, Request, Get, Res, Htt
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import * as qrcode from 'qrcode';
 import { 
   CreateUserDto, 
@@ -163,7 +165,8 @@ export class AuthController {
     return this.authService.submitKyc(req.user.userId, body);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth('JWT-auth')
   @Get('admin/users')
   @HttpCode(HttpStatus.OK)
@@ -172,12 +175,23 @@ export class AuthController {
     return this.authService.adminGetUsers();
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth('JWT-auth')
   @Patch('admin/users/:id/kyc')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Admin approve or reject KYC' })
   adminUpdateKyc(@Param('id') id: string, @Body() body: { status: string }) {
     return this.authService.adminUpdateKycStatus(id, body.status);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
+  @ApiBearerAuth('JWT-auth')
+  @Patch('admin/users/:id/role')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Admin change user role' })
+  adminUpdateRole(@Param('id') id: string, @Body() body: { role: string }) {
+    return this.authService.adminUpdateRole(id, body.role);
   }
 }

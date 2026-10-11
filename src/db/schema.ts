@@ -5,7 +5,7 @@ export const listingStatusEnum = pgEnum('listing_status', ['draft', 'review', 'l
 export const listingCategoryEnum = pgEnum('listing_category', ['saas', 'pos', 'mobile', 'blockchain', 'marketing', 'fintech', 'edtech', 'ecommerce', 'other']);
 export const dealStatusEnum = pgEnum('deal_status', ['negotiation', 'loi_signed', 'due_diligence', 'apa_signed', 'escrow', 'closed', 'cancelled']);
 export const invoiceStatusEnum = pgEnum('invoice_status', ['pending', 'paid', 'released', 'refunded']);
-export const documentTypeEnum = pgEnum('document_type', ['loi', 'apa', 'due_diligence']);
+export const documentTypeEnum = pgEnum('document_type', ['loi', 'apa', 'due_diligence', 'nda', 'dd_checklist', 'escrow_agreement']);
 export const reportTypeEnum = pgEnum('report_type', ['cim', 'valuation', 'pnl']);
 
 export const users = pgTable('users', {
@@ -161,4 +161,72 @@ export const aiBrokerReports = pgTable('ai_broker_reports', {
   reportType: reportTypeEnum('report_type').notNull(),
   content: jsonb('content').notNull(),
   generatedAt: timestamp('generated_at').defaultNow().notNull(),
+});
+
+// ── Due Diligence ────────────────────────────────────────────────────────
+export const dueDiligenceRooms = pgTable('due_diligence_rooms', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dealId: uuid('deal_id').references(() => deals.id).notNull(),
+  status: text('status').default('open').notNull(), // open, completed, cancelled
+  checklistData: jsonb('checklist_data'), // structured checklist from AI
+  completionPct: integer('completion_pct').default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const dueDiligenceDocuments = pgTable('due_diligence_documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  roomId: uuid('room_id').references(() => dueDiligenceRooms.id).notNull(),
+  uploadedBy: uuid('uploaded_by').references(() => users.id).notNull(),
+  category: text('category').notNull(), // financial, legal, technical, operational, customer, ip
+  fileName: text('file_name').notNull(),
+  fileUrl: text('file_url').notNull(),
+  fileSize: integer('file_size'),
+  mimeType: text('mime_type'),
+  status: text('status').default('pending_review').notNull(), // pending_review, approved, flagged, rejected
+  reviewNotes: text('review_notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const dueDiligenceChecklistItems = pgTable('due_diligence_checklist_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  roomId: uuid('room_id').references(() => dueDiligenceRooms.id).notNull(),
+  category: text('category').notNull(),
+  item: text('item').notNull(),
+  description: text('description'),
+  priority: text('priority').default('medium').notNull(), // critical, high, medium, low
+  status: text('status').default('pending').notNull(), // pending, in_progress, completed, waived
+  completedBy: uuid('completed_by').references(() => users.id),
+  completedAt: timestamp('completed_at'),
+  notes: text('notes'),
+  documentId: uuid('document_id').references(() => dueDiligenceDocuments.id),
+});
+
+// ── Deal Documents (generated contracts, signed docs) ────────────────────
+export const dealDocuments = pgTable('deal_documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dealId: uuid('deal_id').references(() => deals.id).notNull(),
+  documentType: text('document_type').notNull(), // loi, apa, nda, dd_checklist, escrow_agreement
+  title: text('title').notNull(),
+  content: jsonb('content').notNull(), // { markdown, disclaimer, etc. }
+  version: integer('version').default(1).notNull(),
+  status: text('status').default('draft').notNull(), // draft, sent, signed, countersigned, executed
+  generatedBy: uuid('generated_by').references(() => users.id).notNull(),
+  signedByBuyer: boolean('signed_by_buyer').default(false),
+  signedBySeller: boolean('signed_by_seller').default(false),
+  buyerSignedAt: timestamp('buyer_signed_at'),
+  sellerSignedAt: timestamp('seller_signed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// ── Platform Analytics / Admin ────────────────────────────────────────────
+export const platformEvents = pgTable('platform_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventType: text('event_type').notNull(), // listing_created, deal_opened, offer_made, payment_received, etc.
+  actorId: uuid('actor_id').references(() => users.id),
+  entityType: text('entity_type'), // listing, deal, offer, invoice
+  entityId: uuid('entity_id'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });

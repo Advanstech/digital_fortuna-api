@@ -13,6 +13,9 @@ import { DealsModule } from './deals/deals.module';
 import { OffersModule } from './offers/offers.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { BrokersModule } from './brokers/brokers.module';
+import { ValuationModule } from './valuation/valuation.module';
+import { DueDiligenceModule } from './due-diligence/due-diligence.module';
+import { AdminModule } from './admin/admin.module';
 import { RedisModule } from './redis/redis.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
@@ -54,6 +57,9 @@ import { MailModule } from './mail/mail.module';
     OffersModule,
     InvoicesModule,
     BrokersModule,
+    ValuationModule,
+    DueDiligenceModule,
+    AdminModule,
     HealthModule,
     MailModule,
   ],

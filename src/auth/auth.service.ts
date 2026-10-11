@@ -124,7 +124,7 @@ export class AuthService {
 
     const user = users[0];
     const valid = await bcrypt.compare(pass, user.password);
-    console.log(`Login attempt for ${email}: password length is ${pass.length}, password is '${pass}', valid: ${valid}`);
+    this.logger.debug(`Login attempt for ${email}: valid=${valid}`);
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -146,8 +146,8 @@ export class AuthService {
 
   private async issueTokens(user: { id: string; email: string; role: string }) {
     const payload = { email: user.email, sub: user.id, role: user.role };
-    const accessToken = this.jwtService.sign(payload);
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    const accessToken = this.jwtService.sign({ ...payload, typ: 'access' });
+    const refreshToken = this.jwtService.sign({ ...payload, typ: 'refresh' }, { expiresIn: '7d' });
 
     await this.db
       .update(schema.users)
@@ -272,6 +272,18 @@ export class AuthService {
       .set({ kycStatus: status })
       .where(eq(schema.users.id, userId));
     return { success: true, userId, status };
+  }
+
+  async adminUpdateRole(userId: string, role: string) {
+    const validRoles = ['buyer', 'seller', 'admin', 'super_admin', 'broker', 'vc', 'legal', 'bank'];
+    if (!validRoles.includes(role)) {
+      throw new BadRequestException(`Invalid role: ${role}`);
+    }
+    await this.db
+      .update(schema.users)
+      .set({ role: role as any })
+      .where(eq(schema.users.id, userId));
+    return { success: true, userId, role };
   }
 
   async generateTwoFactorSecret(userId: string) {

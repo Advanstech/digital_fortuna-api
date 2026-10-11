@@ -1,7 +1,13 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { StripeService } from './stripe.service';
 import { PaystackService } from './paystack.service';
+import { JwtAuthGuard } from '../auth/auth.guard';
+import { KycGuard } from '../auth/kyc.guard';
 
+@ApiTags('Payments')
+@UseGuards(JwtAuthGuard, KycGuard)
+@ApiBearerAuth('JWT-auth')
 @Controller('payments')
 export class PaymentsController {
   constructor(

@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsNumber, IsOptional, IsBoolean, IsJSON, MinLength, MaxLength, IsUrl, IsInt, Min } from 'class-validator';
+import { IsString, IsEmail, IsEnum, IsNumber, IsOptional, IsBoolean, IsJSON, MinLength, MaxLength, IsUrl, IsInt, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { listingCategoryEnum, listingStatusEnum } from '../../db/schema';
 
@@ -88,6 +88,11 @@ export class CreateListingDto {
   @ApiPropertyOptional({ description: 'Rich sales collateral: highlights, metrics, benefits, relevance, growth, images' })
   @IsOptional()
   details?: Record<string, any>;
+
+  @ApiPropertyOptional({ example: 'owner@example.com', description: 'Contact email for listing notifications' })
+  @IsOptional()
+  @IsEmail()
+  contactEmail?: string;
 }
 
 export class UpdateListingDto {

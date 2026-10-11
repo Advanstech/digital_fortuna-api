@@ -17,6 +17,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!payload.sub) {
       throw new UnauthorizedException('Invalid Token');
     }
+    // Reject refresh tokens used as access tokens
+    if (payload.typ === 'refresh') {
+      throw new UnauthorizedException('Refresh tokens cannot be used for API access');
+    }
     return { userId: payload.sub, email: payload.email, role: payload.role };
   }
 }

@@ -194,7 +194,7 @@ export class DealsService {
     return updated[0];
   }
 
-  async generateLegalDocument(dealId: string, documentType: 'loi' | 'apa', userId: string, role?: string) {
+  async generateLegalDocument(dealId: string, documentType: string, userId: string, role?: string) {
     const deal = await this.getDealOrThrow(dealId, userId, role);
 
     const listings = await this.db
@@ -204,18 +204,107 @@ export class DealsService {
       .limit(1);
     const listing = listings[0] || { title: 'Unknown listing' };
 
-    const content = await this.aiService.generateLegalDocument(deal, listing, documentType);
+    // Load party names
+    const buyer = await this.db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, deal.buyerId)).limit(1);
+    const seller = await this.db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, deal.sellerId)).limit(1);
+    const buyerName = buyer[0]?.email?.split('@')[0] || '[Buyer]';
+    const sellerName = seller[0]?.email?.split('@')[0] || '[Seller]';
 
-    const inserted = await this.db
-      .insert(schema.aiAudits)
-      .values({
-        dealId,
-        listingId: deal.listingId,
-        documentType,
-        content,
-      })
+    let content: any;
+
+    switch (documentType) {
+      case 'nda':
+        content = await this.aiService.generateNDA(buyerName, sellerName, listing.title);
+        break;
+      case 'dd_checklist':
+        content = await this.aiService.generateDueDiligenceChecklist(listing, deal);
+        break;
+      case 'escrow_agreement':
+        content = await this.aiService.generateEscrowAgreement(deal, listing, buyerName, sellerName);
+        break;
+      case 'loi':
+      case 'apa':
+        content = await this.aiService.generateLegalDocument(deal, listing, documentType as 'loi' | 'apa');
+        break;
+      default:
+        throw new BadRequestException(`Unsupported document type: ${documentType}`);
+    }
+
+    // Save to deal_documents for tracking
+    const docRecord = await this.db.insert(schema.dealDocuments).values({
+      dealId,
+      documentType,
+      title: content.title || `${documentType.toUpperCase()} — ${listing.title}`,
+      content,
+      version: 1,
+      status: 'draft',
+      generatedBy: userId,
+    }).returning();
+
+    // Also save to ai_audits for audit trail
+    await this.db.insert(schema.aiAudits).values({
+      dealId,
+      listingId: deal.listingId,
+      documentType: documentType as any,
+      content,
+    });
+
+    return docRecord[0];
+  }
+
+  /**
+   * List all documents generated for a deal.
+   */
+  async getDealDocuments(dealId: string, userId: string, role?: string) {
+    await this.getDealOrThrow(dealId, userId, role);
+    return this.db
+      .select()
+      .from(schema.dealDocuments)
+      .where(eq(schema.dealDocuments.dealId, dealId))
+      .orderBy(desc(schema.dealDocuments.createdAt));
+  }
+
+  /**
+   * Sign a document (buyer or seller).
+   */
+  async signDocument(dealId: string, documentId: string, userId: string, role?: string) {
+    const deal = await this.getDealOrThrow(dealId, userId, role);
+
+    const docs = await this.db
+      .select()
+      .from(schema.dealDocuments)
+      .where(and(eq(schema.dealDocuments.id, documentId), eq(schema.dealDocuments.dealId, dealId)))
+      .limit(1);
+    if (!docs.length) throw new NotFoundException('Document not found');
+
+    const doc = docs[0];
+    const updates: any = { updatedAt: new Date() };
+
+    if (deal.buyerId === userId && !doc.signedByBuyer) {
+      updates.signedByBuyer = true;
+      updates.buyerSignedAt = new Date();
+    } else if (deal.sellerId === userId && !doc.signedBySeller) {
+      updates.signedBySeller = true;
+      updates.sellerSignedAt = new Date();
+    } else {
+      throw new BadRequestException('You have already signed this document or are not a party');
+    }
+
+    // If both parties have now signed, mark as executed
+    const willBeBothSigned =
+      (updates.signedByBuyer || doc.signedByBuyer) && (updates.signedBySeller || doc.signedBySeller);
+    if (willBeBothSigned) {
+      updates.status = 'executed';
+    } else {
+      updates.status = 'signed';
+    }
+
+    const updated = await this.db
+      .update(schema.dealDocuments)
+      .set(updates)
+      .where(eq(schema.dealDocuments.id, documentId))
       .returning();
 
-    return inserted[0];
+    return updated[0];
   }
 }

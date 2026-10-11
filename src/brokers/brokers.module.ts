@@ -3,9 +3,10 @@ import { BrokersController } from './brokers.controller';
 import { BrokersService } from './brokers.service';
 import { DbModule } from '../db/db.module';
 import { AiModule } from '../ai/ai.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
-  imports: [DbModule, AiModule],
+  imports: [DbModule, AiModule, MailModule],
   controllers: [BrokersController],
   providers: [BrokersService],
 })

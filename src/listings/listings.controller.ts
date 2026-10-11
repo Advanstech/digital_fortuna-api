@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@ne
 import { ListingsService } from './listings.service';
 import { ListingFilterDto, CreateListingDto, UpdateListingDto } from '../common/dto/listing.dto';
 import { JwtAuthGuard } from '../auth/auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../common/decorators/public.decorator';
 
@@ -65,11 +66,11 @@ export class ListingsController {
   @Post()
   @ApiOperation({ summary: 'Create a new listing' })
   @ApiResponse({ status: 201, description: 'Listing created' })
-  async createListing(@Body() body: CreateListingDto & { contactEmail?: string }, @Request() req: any) {
+  async createListing(@Body() body: CreateListingDto, @Request() req: any) {
     return this.listingsService.createListing(body, req.user.userId);
   }
 
-  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':slug')
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   @ApiOperation({ summary: 'Get listing by slug' })
@@ -91,7 +92,6 @@ export class ListingsController {
     return this.listingsService.findById(id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @Patch(':id')

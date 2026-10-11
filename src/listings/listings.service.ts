@@ -43,8 +43,9 @@ export class ListingsService {
 
     const conditions: SQL[] = [];
 
-    // Public queries only see live listings unless a specific status is requested
-    conditions.push(eq(schema.listings.status, filters?.status || 'live'));
+    // Public queries only see live listings — status filter is ignored on the public route.
+    // Admin/staff listing moderation should use a separate endpoint.
+    conditions.push(eq(schema.listings.status, 'live'));
 
     if (filters?.category) {
       if ((VALID_CATEGORIES as readonly string[]).includes(filters.category)) {
@@ -217,7 +218,7 @@ export class ListingsService {
     return 'other';
   }
 
-  async createListing(data: CreateListingDto & { contactEmail?: string }, userId: string) {
+  async createListing(data: CreateListingDto, userId: string) {
     const slug = data.slug ? await this.uniqueSlug(data.slug) : await this.uniqueSlug(data.title);
 
     let techStack: any = data.techStack;
@@ -322,10 +323,12 @@ export class ListingsService {
   }
 
   private assertValidListingTransition(from: string, to: string) {
+    // Sellers can only make safe transitions. `review → live` and `* → sold`
+    // require admin/staff (handled by the caller checking role first).
     const allowed: Record<string, string[]> = {
       draft: ['review', 'archived'],
-      review: ['draft', 'live', 'archived'],
-      live: ['sold', 'archived'],
+      review: ['draft', 'archived'],  // live requires admin
+      live: ['archived'],              // sold requires admin
       sold: ['archived'],
       archived: ['draft'],
     };

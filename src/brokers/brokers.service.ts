@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { DRIZZLE_DB } from '../db/db.module';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../db/schema';
@@ -8,6 +8,8 @@ import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class BrokersService {
+  private readonly logger = new Logger(BrokersService.name);
+
   constructor(
     @Inject(DRIZZLE_DB) private db: PostgresJsDatabase<typeof schema>,
     private aiService: AiService,
@@ -98,24 +100,23 @@ export class BrokersService {
   }
 
   async contactBroker(userId: string, email: string, message: string) {
-    // Send email notification to the assigned broker (mocked as general broker email for now)
     const brokerEmail = 'broker@digitalfortuna.test';
+    const escapeHtml = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     
     await this.mailService.sendEmail(
       brokerEmail, 
-      `New Broker Inquiry from ${email}`, 
+      `New Broker Inquiry from ${escapeHtml(email)}`, 
       `<div style="font-family: sans-serif; max-width: 600px;">
         <h2>New Inquiry Received</h2>
-        <p><strong>User ID:</strong> ${userId}</p>
-        <p><strong>User Email:</strong> ${email}</p>
+        <p><strong>User ID:</strong> ${escapeHtml(userId)}</p>
+        <p><strong>User Email:</strong> ${escapeHtml(email)}</p>
         <p><strong>Message:</strong></p>
-        <blockquote style="border-left: 4px solid #00FF85; padding-left: 10px; color: #555;">${message}</blockquote>
+        <blockquote style="border-left: 4px solid #00FF85; padding-left: 10px; color: #555;">${escapeHtml(message)}</blockquote>
         <br />
         <p>Please log in to the admin panel to respond.</p>
       </div>`
     ).catch(err => {
-      // We log error but don't fail the request so user gets success message
-      console.error(`Failed to send broker notification email: ${err.message}`);
+      this.logger.warn(`Failed to send broker notification email: ${err.message}`);
     });
     
     return { success: true, message: 'Broker notified successfully' };

@@ -27,8 +27,8 @@ class UpdateDealStatusDto {
 }
 
 class GenerateDocumentDto {
-  @IsEnum(['loi', 'apa'])
-  documentType!: 'loi' | 'apa';
+  @IsEnum(['loi', 'apa', 'nda', 'dd_checklist', 'escrow_agreement'])
+  documentType!: string;
 }
 
 @ApiTags('Deals')
@@ -76,8 +76,24 @@ export class DealsController {
   }
 
   @Post(':id/generate-document')
-  @ApiOperation({ summary: 'Generate an LOI or APA with AI for this deal' })
+  @ApiOperation({ summary: 'Generate a legal document (LOI, APA, NDA, DD Checklist, Escrow Agreement)' })
   generateLegalDocument(@Param('id', ParseUUIDPipe) id: string, @Body() body: GenerateDocumentDto, @Request() req: any) {
     return this.dealsService.generateLegalDocument(id, body.documentType, req.user.userId, req.user.role);
+  }
+
+  @Get(':id/documents')
+  @ApiOperation({ summary: 'List all documents generated for a deal' })
+  getDealDocuments(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
+    return this.dealsService.getDealDocuments(id, req.user.userId, req.user.role);
+  }
+
+  @Post(':id/documents/:documentId/sign')
+  @ApiOperation({ summary: 'Sign a document (buyer or seller)' })
+  signDocument(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @Request() req: any,
+  ) {
+    return this.dealsService.signDocument(id, documentId, req.user.userId, req.user.role);
   }
 }

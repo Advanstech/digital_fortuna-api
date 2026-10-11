@@ -203,34 +203,117 @@ Return ONLY a JSON object:
     return JSON.parse(response.text!);
   }
 
-  async extractListingFromInput(urlOrText: string) {
-    const isJarvisOrAgentOS = 
-      /jarvis|leotrieu|agent[\s_-]?os|1-person/i.test(urlOrText);
+  async generateValuationNarrative(listing: any, report: any, comparables: any[]): Promise<string> {
+    const prompt = `You are a senior M&A advisor at Digital Fortuna Computing. Write a concise, professional valuation narrative (3-4 paragraphs) for the following business.
 
-    if (isJarvisOrAgentOS) {
-      return {
-        title: "JARVIS - 1-Person Business AI Assistant (Agent OS)",
-        category: "ai",
-        acquisitionPrice: "240000",
-        mrr: "18500",
-        arr: "222000",
-        profitMargin: "91",
-        techStack: "Agent OS Architecture, Python / FastAPI, Next.js 16, LangGraph, Claude 3.5 Sonnet & Gemini 2.5, Tailscale Mesh, SQLite / ChromaDB",
-        description: "JARVIS is the pioneering 1-Person Business AI Assistant running on Agent OS—the first of its kind in Ghana and across Africa. Designed specifically for solopreneurs, creators, and single-operator businesses, JARVIS operates as an always-on autonomous executive layer. Equipped with persistent long-term memory, custom plain-English skill generation, and 24/7 background operation (overnight inbox triage, client follow-ups, and morning strategic briefings). It turns a 1-person company into an enterprise-grade operation.",
-        whySelling: "Expanding deployment scale and seeking capital/partner buyout to institutionalize and scale the Agent OS infrastructure across the broader African SME and venture ecosystem.",
-        contactEmail: "founder@jarvis-os.ai",
-        benefits: "First-Mover Advantage in African AI Infrastructure, High Sticky ARR, Proprietary Agent OS Architecture with Persistent Memory, Turnkey Multi-Agent Automation",
-        relevance: "African solopreneurs and SMEs face severe bandwidth constraints and high operational overhead. JARVIS eliminates manual administrative toil with a self-evolving Agent OS running 24/7.",
-        growth: "1. Expand localized payment & WhatsApp/MoMo integrations for West & Pan-African solopreneurs.\n2. Launch enterprise B2B Agent OS workspaces.\n3. Integrate with Fortuna ecosystem deal flow and automated client servicing.",
-        activeUsers: "3850",
-        logoUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80",
-        screenshotUrl: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
-        pitchDeckUrl: "https://jarvis-os.ai/docs/pitch-deck.pdf"
-      };
+Listing: ${JSON.stringify({ title: listing.title, category: listing.category, revenueMrr: listing.revenueMrr, revenueArr: listing.revenueArr })}
+Valuation Report: ${JSON.stringify({ estimatedValuationMin: report.estimatedValuationMin, estimatedValuationMax: report.estimatedValuationMax, recommendedListPrice: report.recommendedListPrice, primaryMethod: report.primaryMethod, ruleOf40Score: report.ruleOf40Score, factors: report.factors, risks: report.risks })}
+Comparable Listings: ${JSON.stringify(comparables)}
+
+Write in a professional yet accessible tone. Cover: (1) How the valuation was derived, (2) What drives the premium or discount, (3) How it compares to similar businesses, (4) Recommended next steps for the seller. Do NOT wrap in JSON — return plain text.`;
+
+    const response = await this.ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: { temperature: 0.4 },
+    });
+    return response.text || '';
+  }
+
+  async generateNDA(buyerName: string, sellerName: string, listingTitle: string): Promise<any> {
+    const prompt = `You are an M&A attorney at Digital Fortuna Computing. Draft a professional, internationally-accepted Non-Disclosure Agreement (NDA) / Confidentiality Agreement for a business acquisition.
+
+Buyer: ${buyerName}
+Seller: ${sellerName}
+Subject Business: ${listingTitle}
+
+The NDA should cover: definition of confidential information (financial records, customer data, IP, trade secrets, source code, business plans), permitted disclosures, obligations of receiving party, term (2 years), remedies, governing law (State of Delaware / Republic of Ghana as alternatives), and signature blocks.
+
+Return ONLY a JSON object:
+{
+  "title": "string",
+  "documentType": "nda",
+  "markdown": "the full NDA in professional markdown format with proper legal sections, numbered clauses, and signature blocks",
+  "disclaimer": "string noting this is a template requiring legal review"
+}`;
+
+    const response = await this.ai.models.generateContent({
+      model: 'gemini-2.5-pro',
+      contents: prompt,
+      config: { temperature: 0.2, responseMimeType: 'application/json' },
+    });
+    return JSON.parse(response.text!);
+  }
+
+  async generateDueDiligenceChecklist(listing: any, deal: any): Promise<any> {
+    const prompt = `You are an M&A due diligence specialist at Digital Fortuna Computing. Generate a comprehensive due diligence checklist for the acquisition of a ${listing.category || 'software'} business.
+
+Business: ${JSON.stringify({ title: listing.title, category: listing.category, revenueMrr: listing.revenueMrr, techStack: listing.techStack, acquisitionPrice: listing.acquisitionPrice })}
+Deal: ${JSON.stringify({ agreedPrice: deal.agreedPrice, status: deal.status })}
+
+Create a professional checklist organized by category. Each item should have a description and priority level.
+
+Return ONLY a JSON object:
+{
+  "title": "string",
+  "documentType": "due_diligence_checklist",
+  "categories": [
+    {
+      "name": "string (e.g. Financial, Legal, Technical, Operational, Customer, IP)",
+      "items": [
+        {
+          "item": "string",
+          "description": "string",
+          "priority": "critical | high | medium | low",
+          "status": "pending"
+        }
+      ]
     }
+  ],
+  "estimatedCompletionDays": number,
+  "disclaimer": "string"
+}`;
 
-    try {
-      const prompt = `You are an expert M&A startup analyst for Digital Fortuna Computing (a premier marketplace for software, SaaS, AI, and digital assets in Africa and globally).
+    const response = await this.ai.models.generateContent({
+      model: 'gemini-2.5-pro',
+      contents: prompt,
+      config: { temperature: 0.2, responseMimeType: 'application/json' },
+    });
+    return JSON.parse(response.text!);
+  }
+
+  async generateEscrowAgreement(deal: any, listing: any, buyerName: string, sellerName: string): Promise<any> {
+    const prompt = `You are an M&A attorney at Digital Fortuna Computing. Draft a professional Escrow Agreement for a software business acquisition.
+
+Buyer: ${buyerName}
+Seller: ${sellerName}
+Escrow Agent: Digital Fortuna Computing (via Stripe/Paystack)
+Business: ${listing.title}
+Purchase Price: $${deal.agreedPrice?.toLocaleString() || 'TBD'}
+
+The agreement should cover: parties, escrow amount and deposit timeline, release conditions (satisfactory handover, asset transfer verification, 30-day warranty period), dispute resolution mechanism, escrow agent responsibilities and fees (8% platform fee), refund conditions, governing law, and signature blocks.
+
+Return ONLY a JSON object:
+{
+  "title": "string",
+  "documentType": "escrow_agreement",
+  "markdown": "the full agreement in professional markdown with numbered clauses and signature blocks",
+  "escrowAmount": number,
+  "platformFeePct": 8,
+  "warrantyPeriodDays": 30,
+  "disclaimer": "string"
+}`;
+
+    const response = await this.ai.models.generateContent({
+      model: 'gemini-2.5-pro',
+      contents: prompt,
+      config: { temperature: 0.2, responseMimeType: 'application/json' },
+    });
+    return JSON.parse(response.text!);
+  }
+
+  async extractListingFromInput(urlOrText: string) {
+    const prompt = `You are an expert M&A startup analyst for Digital Fortuna Computing (a premier marketplace for software, SaaS, AI, and digital assets in Africa and globally).
 Analyze the following startup input (URL or brief description):
 "${urlOrText}"
 
@@ -258,36 +341,15 @@ Return ONLY a JSON object with this exact shape:
   "pitchDeckUrl": "string"
 }`;
 
-      const response = await this.ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-          temperature: 0.4,
-          responseMimeType: "application/json",
-        }
-      });
+    const response = await this.ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        temperature: 0.4,
+        responseMimeType: "application/json",
+      }
+    });
 
-      return JSON.parse(response.text!);
-    } catch (err) {
-      return {
-        title: urlOrText.includes("http") ? "AI SaaS Venture" : urlOrText.slice(0, 40),
-        category: "ai",
-        acquisitionPrice: "180000",
-        mrr: "12500",
-        arr: "150000",
-        profitMargin: "88",
-        techStack: "Next.js, Python, PostgreSQL, OpenAI / Gemini, Tailscale",
-        description: `Automated business assistant built for modern digital operators. Streamlines workflows, automates client communications, and scales revenue operations with minimal human intervention.`,
-        whySelling: "Founder pursuing next venture; seeking strategic acquirer to scale operations.",
-        contactEmail: "founder@venture.ai",
-        benefits: "High Gross Margins, Recurring Revenue, Defensible IP",
-        relevance: "Automates repetitive operational toil for solo founders and agile teams.",
-        growth: "1. Expand direct B2B outbound marketing.\n2. Add localized payment and API integrations.",
-        activeUsers: "2100",
-        logoUrl: "",
-        screenshotUrl: "",
-        pitchDeckUrl: ""
-      };
-    }
+    return JSON.parse(response.text!);
   }
 }

@@ -8,6 +8,15 @@ import { MailService } from '../mail/mail.service';
 
 type OfferStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 @Injectable()
 export class OffersService {
   private readonly logger = new Logger(OffersService.name);
@@ -90,8 +99,8 @@ export class OffersService {
           `New offer on ${listing.title}`,
           `<div style="font-family: sans-serif; max-width: 600px;">
             <h2>New Offer Received</h2>
-            <p>You received an offer of <strong>${offer.currency} ${offer.amount.toLocaleString()}</strong> on <strong>${listing.title}</strong>.</p>
-            ${offer.message ? `<blockquote style="border-left: 4px solid #00FF85; padding-left: 10px; color: #555;">${offer.message}</blockquote>` : ''}
+            <p>You received an offer of <strong>${escapeHtml(offer.currency)} ${offer.amount.toLocaleString()}</strong> on <strong>${escapeHtml(listing.title)}</strong>.</p>
+            ${offer.message ? `<blockquote style="border-left: 4px solid #00FF85; padding-left: 10px; color: #555;">${escapeHtml(offer.message)}</blockquote>` : ''}
             <p>Log in to your dashboard to accept or reject it.</p>
           </div>`,
         )
@@ -209,7 +218,7 @@ export class OffersService {
           `Your offer on ${listing.title} was accepted`,
           `<div style="font-family: sans-serif; max-width: 600px;">
             <h2>Offer Accepted</h2>
-            <p>Your offer of <strong>${offer.currency} ${offer.amount.toLocaleString()}</strong> on <strong>${listing.title}</strong> was accepted.</p>
+            <p>Your offer of <strong>${escapeHtml(offer.currency)} ${offer.amount.toLocaleString()}</strong> on <strong>${escapeHtml(listing.title)}</strong> was accepted.</p>
             <p>A secure deal room has been opened so you can negotiate terms, sign an LOI, and fund escrow.</p>
           </div>`,
         )
