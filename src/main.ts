@@ -67,6 +67,9 @@ async function bootstrap() {
     maxAge: 86400, // 24 hours
   });
 
+  // Global prefix: all routes are under /api
+  app.setGlobalPrefix('api');
+
   // API Versioning
   app.enableVersioning({
     type: VersioningType.URI,
@@ -95,12 +98,10 @@ async function bootstrap() {
     new LoggingInterceptor()
   );
 
-  // Swagger Documentation (only in dev/staging)
-  if (env !== 'production') {
-    const { setupSwagger } = await import('./swagger/swagger.config');
-    setupSwagger(app);
-    logger.log(`📚 Swagger docs: http://0.0.0.0:${port}/docs`);
-  }
+  // Swagger Documentation
+  const { setupSwagger } = await import('./swagger/swagger.config');
+  setupSwagger(app);
+  logger.log(`📚 Swagger docs: http://0.0.0.0:${port}/api/v1/docs`);
 
   // Graceful shutdown
   app.enableShutdownHooks();

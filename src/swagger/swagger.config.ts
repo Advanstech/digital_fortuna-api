@@ -56,7 +56,7 @@ Authorization: Bearer <your_jwt_token>
     ignoreGlobalPrefix: false,
   });
 
-  SwaggerModule.setup('docs', app, document, {
+  SwaggerModule.setup('api/v1/docs', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
       docExpansion: 'none',
