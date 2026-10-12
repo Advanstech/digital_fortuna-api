@@ -5,6 +5,7 @@ import * as schema from '../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { GtpayService } from './gtpay.service';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 /**
  * Escrow Service — manages the escrow flow for marketplace deals.
@@ -31,6 +32,7 @@ export class EscrowService {
     @Inject(DRIZZLE_DB) private db: PostgresJsDatabase<typeof schema>,
     private gtpayService: GtpayService,
     private mailService: MailService,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -162,6 +164,23 @@ export class EscrowService {
       .set({ status: 'closed', updatedAt: new Date() })
       .where(eq(schema.deals.id, params.dealId));
 
+    this.notificationsService.notify({
+      userId: deal.sellerId,
+      type: 'payment',
+      title: 'Escrow funds released',
+      body: `GHS ${sellerAmountGhs.toLocaleString()} has been released to you (platform fee deducted).`,
+      link: `/deal/${params.dealId}`,
+      metadata: { dealId: params.dealId, payoutGhs: sellerAmountGhs },
+    });
+    this.notificationsService.notify({
+      userId: deal.buyerId,
+      type: 'deal',
+      title: 'Deal closed',
+      body: 'Escrow has been released to the seller. The acquisition is complete.',
+      link: `/deal/${params.dealId}`,
+      metadata: { dealId: params.dealId },
+    });
+
     return {
       dealId: params.dealId,
       totalEscrow: balance / 100,
@@ -224,6 +243,23 @@ export class EscrowService {
     await this.db.update(schema.deals)
       .set({ status: 'cancelled', updatedAt: new Date() })
       .where(eq(schema.deals.id, params.dealId));
+
+    this.notificationsService.notify({
+      userId: deal.buyerId,
+      type: 'payment',
+      title: 'Escrow refunded',
+      body: `GHS ${refundAmountGhs.toLocaleString()} has been refunded to you. ${params.reason}`,
+      link: `/deal/${params.dealId}`,
+      metadata: { dealId: params.dealId, refundGhs: refundAmountGhs },
+    });
+    this.notificationsService.notify({
+      userId: deal.sellerId,
+      type: 'deal',
+      title: 'Deal cancelled and escrow refunded',
+      body: `The escrowed funds were returned to the buyer. ${params.reason}`,
+      link: `/deal/${params.dealId}`,
+      metadata: { dealId: params.dealId },
+    });
 
     return {
       dealId: params.dealId,
@@ -398,6 +434,30 @@ export class EscrowService {
           fromUserId: payment.userId,
           description: `Escrow deposit via ${payment.serviceName}`,
         });
+
+        const [deal] = await this.db.select()
+          .from(schema.deals)
+          .where(eq(schema.deals.id, payment.dealId))
+          .limit(1);
+        if (deal) {
+          const amountGhs = payment.amount / 100;
+          this.notificationsService.notify({
+            userId: deal.sellerId,
+            type: 'payment',
+            title: 'Buyer funded escrow',
+            body: `GHS ${amountGhs.toLocaleString()} was deposited into escrow for your deal. You can now proceed with the asset transfer.`,
+            link: `/deal/${payment.dealId}`,
+            metadata: { dealId: payment.dealId, paymentId: payment.id },
+          });
+          this.notificationsService.notify({
+            userId: deal.buyerId,
+            type: 'payment',
+            title: 'Escrow deposit confirmed',
+            body: `Your deposit of GHS ${amountGhs.toLocaleString()} is now held securely in escrow.`,
+            link: `/deal/${payment.dealId}`,
+            metadata: { dealId: payment.dealId, paymentId: payment.id },
+          });
+        }
       }
     }
 

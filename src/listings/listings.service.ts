@@ -7,6 +7,7 @@ import { CacheService } from '../redis/cache.service';
 import { ListingFilterDto, ListingStatus, CreateListingDto, UpdateListingDto } from '../common/dto/listing.dto';
 import { createPaginatedResponse, PaginatedResponse } from '../common/dto/pagination.dto';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const VALID_CATEGORIES = ['saas', 'pos', 'mobile', 'blockchain', 'marketing', 'fintech', 'edtech', 'ecommerce', 'other'] as const;
 
@@ -20,6 +21,7 @@ export class ListingsService {
     @Inject(DRIZZLE_DB) private db: PostgresJsDatabase<typeof schema>,
     @Inject(CacheService) private cacheService: CacheService,
     private mailService: MailService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async findAll(filters?: ListingFilterDto): Promise<PaginatedResponse<any>> {
@@ -331,6 +333,27 @@ export class ListingsService {
       .set(updates)
       .where(eq(schema.listings.id, id))
       .returning();
+
+    if (data.status !== undefined && data.status !== listing.status) {
+      const messages: Record<string, { title: string; body: string }> = {
+        live: { title: 'Your listing is now live', body: `"${listing.title}" has been approved and is visible on the marketplace.` },
+        review: { title: 'Listing submitted for review', body: `"${listing.title}" is now in the moderation queue.` },
+        draft: { title: 'Listing moved to draft', body: `"${listing.title}" is no longer under review.` },
+        archived: { title: 'Listing archived', body: `"${listing.title}" was archived and is hidden from the marketplace.` },
+        sold: { title: 'Listing marked as sold', body: `"${listing.title}" has been marked as sold.` },
+      };
+      const m = messages[data.status as string];
+      if (m) {
+        this.notificationsService.notify({
+          userId: listing.sellerId,
+          type: 'listing',
+          title: m.title,
+          body: m.body,
+          link: '/dashboard',
+          metadata: { listingId: id, status: data.status },
+        });
+      }
+    }
 
     await this.invalidateCache(id, listing.slug);
     return updated[0];

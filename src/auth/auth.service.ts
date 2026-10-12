@@ -8,6 +8,7 @@ import * as bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
 import { generateSecret, generateURI, verify } from 'otplib';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const BCRYPT_ROUNDS = 12;
 const KYC_TERMS_VERSION = '1';
@@ -24,6 +25,7 @@ export class AuthService {
     @Inject(DRIZZLE_DB) private db: PostgresJsDatabase<typeof schema>,
     private jwtService: JwtService,
     private mailService: MailService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async register(email: string, pass: string, role: 'buyer' | 'seller' = 'buyer') {
@@ -398,19 +400,33 @@ export class AuthService {
       }
     }
 
+    if (status === 'verified' || status === 'rejected') {
+      this.notificationsService.notify({
+        userId,
+        type: 'kyc',
+        title: status === 'verified' ? 'Identity verification approved' : 'Identity verification declined',
+        body: status === 'verified'
+          ? 'Your account is now fully verified. You can make offers, open deal rooms, and use escrow.'
+          : `Your KYC submission was declined.${reason ? ` Reason: ${reason}` : ''} Please review and resubmit.`,
+        link: '/dashboard',
+      });
+    }
+
     return { success: true, userId, status };
   }
 
   async adminUpdateRole(userId: string, role: string) {
-    const validRoles = ['buyer', 'seller', 'admin', 'super_admin', 'superadmin', 'root', 'broker', 'vc', 'legal', 'bank'];
-    if (!validRoles.includes(role)) {
+    // DB enum only stores canonical roles — map legacy aliases
+    const normalized = role === 'superadmin' || role === 'root' ? 'super_admin' : role;
+    const validRoles = ['buyer', 'seller', 'admin', 'super_admin', 'broker', 'vc', 'legal', 'bank'];
+    if (!validRoles.includes(normalized)) {
       throw new BadRequestException(`Invalid role: ${role}`);
     }
     await this.db
       .update(schema.users)
-      .set({ role: role as any })
+      .set({ role: normalized as any })
       .where(eq(schema.users.id, userId));
-    return { success: true, userId, role };
+    return { success: true, userId, role: normalized };
   }
 
   async adminUpdateUserProfile(userId: string, data: any) {

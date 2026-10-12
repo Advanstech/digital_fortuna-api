@@ -5,6 +5,7 @@ import * as schema from '../db/schema';
 import { eq, and, desc, or, inArray } from 'drizzle-orm';
 import { CreateOfferDto } from '../common/dto/offer.dto';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 type OfferStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn';
 
@@ -24,6 +25,7 @@ export class OffersService {
   constructor(
     @Inject(DRIZZLE_DB) private db: PostgresJsDatabase<typeof schema>,
     private mailService: MailService,
+    private notificationsService: NotificationsService,
   ) {}
 
   private async getListingOrThrow(listingId: string) {
@@ -85,6 +87,15 @@ export class OffersService {
       .returning();
 
     const offer = inserted[0];
+
+    this.notificationsService.notify({
+      userId: listing.sellerId,
+      type: 'offer',
+      title: `New offer on ${listing.title}`,
+      body: `${offer.currency} ${offer.amount.toLocaleString()}${offer.message ? ` — "${offer.message.slice(0, 120)}"` : ''}`,
+      link: '/dashboard',
+      metadata: { offerId: offer.id, listingId: listing.id, amount: offer.amount, currency: offer.currency },
+    });
 
     const seller = await this.db
       .select({ email: schema.users.email })
@@ -205,6 +216,15 @@ export class OffersService {
       .returning();
 
     // Notify the buyer
+    this.notificationsService.notify({
+      userId: offer.buyerId,
+      type: 'offer',
+      title: `Your offer on ${listing.title} was accepted`,
+      body: `A secure deal room has been opened. Negotiate terms, sign an LOI, and fund escrow.`,
+      link: `/deal/${deal[0].id}`,
+      metadata: { offerId: offer.id, listingId: listing.id, dealId: deal[0].id },
+    });
+
     const buyer = await this.db
       .select({ email: schema.users.email })
       .from(schema.users)
@@ -229,7 +249,17 @@ export class OffersService {
   }
 
   async rejectOffer(offerId: string, sellerId: string) {
-    const { offer } = await this.transition(offerId, sellerId, 'seller', 'rejected');
+    const { offer, listing } = await this.transition(offerId, sellerId, 'seller', 'rejected');
+
+    this.notificationsService.notify({
+      userId: offer.buyerId,
+      type: 'offer',
+      title: `Your offer on ${listing.title} was declined`,
+      body: `Your offer of ${offer.currency} ${offer.amount.toLocaleString()} was declined by the seller.`,
+      link: '/dashboard',
+      metadata: { offerId: offer.id, listingId: listing.id },
+    });
+
     return offer;
   }
 

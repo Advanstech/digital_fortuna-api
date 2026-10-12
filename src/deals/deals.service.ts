@@ -4,6 +4,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../db/schema';
 import { eq, and, or, asc, desc, ne } from 'drizzle-orm';
 import { AiService } from '../ai/ai.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 type DealStatus = 'negotiation' | 'loi_signed' | 'due_diligence' | 'apa_signed' | 'escrow' | 'closed' | 'cancelled';
 
@@ -24,6 +25,7 @@ export class DealsService {
   constructor(
     @Inject(DRIZZLE_DB) private db: PostgresJsDatabase<typeof schema>,
     private aiService: AiService,
+    private notificationsService: NotificationsService,
   ) {}
 
   private isParticipant(deal: any, userId: string, role?: string) {
@@ -158,6 +160,19 @@ export class DealsService {
       .set({ updatedAt: new Date() })
       .where(eq(schema.deals.id, dealId));
 
+    // Notify the counterparty (skip for staff observers who aren't buyer/seller)
+    const recipientId = senderId === deal.buyerId ? deal.sellerId : deal.buyerId;
+    if (recipientId !== senderId) {
+      this.notificationsService.notify({
+        userId: recipientId,
+        type: 'deal',
+        title: 'New message in your deal room',
+        body: content.trim().slice(0, 140),
+        link: `/deal/${dealId}`,
+        metadata: { dealId },
+      });
+    }
+
     return inserted[0];
   }
 
@@ -189,6 +204,17 @@ export class DealsService {
         .update(schema.listings)
         .set({ status: 'sold' })
         .where(eq(schema.listings.id, deal.listingId));
+    }
+
+    const counterpartyId = userId === deal.buyerId ? deal.sellerId : deal.buyerId;
+    if (counterpartyId !== userId) {
+      this.notificationsService.notify({
+        userId: counterpartyId,
+        type: 'deal',
+        title: `Deal moved to ${status.replace(/_/g, ' ')}`,
+        link: `/deal/${dealId}`,
+        metadata: { dealId, status },
+      });
     }
 
     return updated[0];

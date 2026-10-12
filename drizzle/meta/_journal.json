@@ -57,6 +57,13 @@
       "when": 1791723070571,
       "tag": "0007_living_penance",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791835333932,
+      "tag": "0008_thankful_silvermane",
+      "breakpoints": true
     }
   ]
 }

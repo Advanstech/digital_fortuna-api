@@ -19,6 +19,7 @@ import { AdminModule } from './admin/admin.module';
 import { RedisModule } from './redis/redis.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { MailModule } from './mail/mail.module';
     AdminModule,
     HealthModule,
     MailModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

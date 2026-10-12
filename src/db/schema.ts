@@ -302,6 +302,19 @@ export const marketplaceFees = pgTable('marketplace_fees', {
   paidAt: timestamp('paid_at'),
 });
 
+// ── Notifications ────────────────────────────────────────────────────────
+export const notifications = pgTable('notifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  type: text('type').notNull(), // kyc, deal, offer, payment, listing, system
+  title: text('title').notNull(),
+  body: text('body'),
+  link: text('link'), // frontend route to navigate to (e.g. /deal/abc, /dashboard)
+  read: boolean('read').default(false).notNull(),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // ── Platform Analytics / Admin ────────────────────────────────────────────
 export const platformEvents = pgTable('platform_events', {
   id: uuid('id').primaryKey().defaultRandom(),
