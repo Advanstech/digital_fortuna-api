@@ -159,7 +159,7 @@ export class PaymentsController {
 
   @Post('escrow/release')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('admin', 'super_admin', 'superadmin')
   @ApiOperation({ summary: 'Release escrow funds to seller (admin only)' })
   async releaseEscrow(
     @Req() req: any,
@@ -179,7 +179,7 @@ export class PaymentsController {
 
   @Post('escrow/refund')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('admin', 'super_admin', 'superadmin')
   @ApiOperation({ summary: 'Refund escrow to buyer (admin only)' })
   async refundEscrow(
     @Req() req: any,

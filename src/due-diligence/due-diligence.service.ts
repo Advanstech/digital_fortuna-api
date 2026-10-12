@@ -5,7 +5,7 @@ import * as schema from '../db/schema';
 import { eq, and, desc, asc, sql } from 'drizzle-orm';
 import { AiService } from '../ai/ai.service';
 
-const STAFF_ROLES = new Set(['admin', 'super_admin', 'broker', 'legal', 'bank']);
+const STAFF_ROLES = new Set(['admin', 'super_admin', 'superadmin', 'root', 'broker', 'legal', 'bank']);
 
 @Injectable()
 export class DueDiligenceService {

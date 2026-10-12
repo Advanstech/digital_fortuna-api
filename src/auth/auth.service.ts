@@ -402,7 +402,7 @@ export class AuthService {
   }
 
   async adminUpdateRole(userId: string, role: string) {
-    const validRoles = ['buyer', 'seller', 'admin', 'super_admin', 'broker', 'vc', 'legal', 'bank'];
+    const validRoles = ['buyer', 'seller', 'admin', 'super_admin', 'superadmin', 'root', 'broker', 'vc', 'legal', 'bank'];
     if (!validRoles.includes(role)) {
       throw new BadRequestException(`Invalid role: ${role}`);
     }

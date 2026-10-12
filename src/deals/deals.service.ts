@@ -17,7 +17,7 @@ const DEAL_TRANSITIONS: Record<DealStatus, DealStatus[]> = {
   cancelled: ['negotiation'],
 };
 
-const STAFF_ROLES = new Set(['admin', 'super_admin', 'broker', 'legal', 'bank']);
+const STAFF_ROLES = new Set(['admin', 'super_admin', 'superadmin', 'root', 'broker', 'legal', 'bank']);
 
 @Injectable()
 export class DealsService {

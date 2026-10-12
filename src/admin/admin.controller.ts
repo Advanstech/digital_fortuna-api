@@ -7,7 +7,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('Admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin', 'super_admin')
+@Roles('admin', 'super_admin', 'superadmin')
 @ApiBearerAuth('JWT-auth')
 @Controller('admin')
 export class AdminController {

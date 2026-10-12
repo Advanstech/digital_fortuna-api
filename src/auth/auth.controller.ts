@@ -176,7 +176,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('admin', 'super_admin', 'superadmin')
   @ApiBearerAuth('JWT-auth')
   @Get('admin/users')
   @HttpCode(HttpStatus.OK)
@@ -186,7 +186,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('admin', 'super_admin', 'superadmin')
   @ApiBearerAuth('JWT-auth')
   @Patch('admin/users/:id/kyc')
   @HttpCode(HttpStatus.OK)
@@ -196,7 +196,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('admin', 'super_admin', 'superadmin')
   @ApiBearerAuth('JWT-auth')
   @Patch('admin/users/:id/role')
   @HttpCode(HttpStatus.OK)
@@ -206,7 +206,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('admin', 'super_admin', 'superadmin')
   @ApiBearerAuth('JWT-auth')
   @Get('admin/users/:id')
   @HttpCode(HttpStatus.OK)
@@ -216,7 +216,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('admin', 'super_admin', 'superadmin')
   @ApiBearerAuth('JWT-auth')
   @Patch('admin/users/:id/profile')
   @HttpCode(HttpStatus.OK)

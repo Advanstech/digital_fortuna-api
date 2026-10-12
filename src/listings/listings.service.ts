@@ -274,7 +274,7 @@ export class ListingsService {
   async updateListing(id: string, data: UpdateListingDto, userId: string, role?: string) {
     const listing = await this.findById(id);
 
-    if (listing.sellerId !== userId && role !== 'admin' && role !== 'super_admin') {
+    if (listing.sellerId !== userId && role !== 'admin' && role !== 'super_admin' && role !== 'superadmin' && role !== 'root') {
       throw new ForbiddenException('You do not own this listing');
     }
 
@@ -313,7 +313,7 @@ export class ListingsService {
     }
 
     if (data.status !== undefined) {
-      if (role !== 'admin' && role !== 'super_admin') {
+      if (role !== 'admin' && role !== 'super_admin' && role !== 'superadmin' && role !== 'root') {
         this.assertValidListingTransition(listing.status, data.status);
       }
       updates.status = data.status;
@@ -339,7 +339,7 @@ export class ListingsService {
   async deleteListing(id: string, userId: string, role?: string) {
     const listing = await this.findById(id);
 
-    if (listing.sellerId !== userId && role !== 'admin' && role !== 'super_admin') {
+    if (listing.sellerId !== userId && role !== 'admin' && role !== 'super_admin' && role !== 'superadmin' && role !== 'root') {
       throw new ForbiddenException('You do not own this listing');
     }
 
