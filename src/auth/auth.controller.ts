@@ -31,7 +31,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'User successfully registered' })
   @ApiResponse({ status: 400, description: 'Invalid input or user already exists' })
   async register(@Body() body: CreateUserDto) {
-    return this.authService.register(body.email, body.password);
+    return this.authService.register(body.email, body.password, body.role ?? 'buyer');
   }
 
   @Public()

@@ -25,7 +25,7 @@ export class AuthService {
     private mailService: MailService,
   ) {}
 
-  async register(email: string, pass: string) {
+  async register(email: string, pass: string, role: 'buyer' | 'seller' = 'buyer') {
     const existing = await this.db
       .select({ id: schema.users.id })
       .from(schema.users)
@@ -42,7 +42,7 @@ export class AuthService {
       .values({
         email: email.toLowerCase(),
         password: hashed,
-        role: 'buyer',
+        role,
       })
       .returning({ id: schema.users.id, email: schema.users.email, role: schema.users.role });
 
