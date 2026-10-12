@@ -157,6 +157,16 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
+  @Post('kyc/accept-terms')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Record acceptance of the current KYC verification terms' })
+  @ApiResponse({ status: 200, description: 'Verification terms acceptance recorded' })
+  acceptKycTerms(@Request() req: any) {
+    return this.authService.acceptKycTerms(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @Post('kyc/submit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Submit KYC information' })

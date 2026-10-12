@@ -104,10 +104,15 @@ export class KycSubmitDto {
 }
 
 export class UpdateProfileDto {
-  @ApiPropertyOptional({ description: 'User full name' })
+  @ApiPropertyOptional({ description: 'User display name' })
   @IsString()
   @IsOptional()
   displayName?: string;
+
+  @ApiPropertyOptional({ description: 'User full legal name' })
+  @IsString()
+  @IsOptional()
+  fullLegalName?: string;
 
   @ApiPropertyOptional({ description: 'Company name' })
   @IsString()

@@ -10,6 +10,7 @@ import { generateSecret, generateURI, verify } from 'otplib';
 import { MailService } from '../mail/mail.service';
 
 const BCRYPT_ROUNDS = 12;
+const KYC_TERMS_VERSION = '1';
 
 // bcrypt only reads the first 72 bytes; JWTs share a long identical prefix,
 // so refresh tokens are hashed via SHA-256 digest instead of raw.
@@ -231,22 +232,68 @@ export class AuthService {
 
   async updateProfile(userId: string, data: any) {
     const updateData: any = {};
-    if (data.displayName !== undefined) updateData.displayName = data.displayName;
+    if (data.displayName !== undefined) {
+      updateData.displayName = data.displayName;
+      updateData.fullLegalName = data.fullLegalName ?? data.displayName;
+    }
+    if (data.fullLegalName !== undefined) updateData.fullLegalName = data.fullLegalName;
     if (data.companyName !== undefined) updateData.companyName = data.companyName;
-    
+
     if (Object.keys(updateData).length > 0) {
       await this.db
         .insert(schema.profiles)
         .values({ userId, ...updateData })
         .onConflictDoUpdate({ target: schema.profiles.userId, set: updateData });
     }
-    
-    return { success: true };
+
+    return this.getMe(userId);
+  }
+
+  async acceptKycTerms(userId: string) {
+    const records = await this.db
+      .select({ kycData: schema.profiles.kycData })
+      .from(schema.profiles)
+      .where(eq(schema.profiles.userId, userId))
+      .limit(1);
+    const existingKycData = (records[0]?.kycData as Record<string, any> | null) || {};
+    const existingAcceptedAt = existingKycData.verificationTermsAcceptedAt;
+
+    if (existingKycData.verificationTermsVersion === KYC_TERMS_VERSION && existingAcceptedAt) {
+      return { accepted: true, acceptedAt: existingAcceptedAt, version: KYC_TERMS_VERSION };
+    }
+
+    const acceptedAt = new Date().toISOString();
+    const kycData = {
+      ...existingKycData,
+      verificationTermsAcceptedAt: acceptedAt,
+      verificationTermsVersion: KYC_TERMS_VERSION,
+    };
+
+    await this.db
+      .insert(schema.profiles)
+      .values({ userId, kycData })
+      .onConflictDoUpdate({ target: schema.profiles.userId, set: { kycData } });
+
+    return { accepted: true, acceptedAt, version: KYC_TERMS_VERSION };
   }
 
   async submitKyc(userId: string, data: any) {
+    const records = await this.db
+      .select({ kycData: schema.profiles.kycData })
+      .from(schema.profiles)
+      .where(eq(schema.profiles.userId, userId))
+      .limit(1);
+    const existingKycData = (records[0]?.kycData as Record<string, any> | null) || {};
+    if (
+      existingKycData.verificationTermsVersion !== KYC_TERMS_VERSION ||
+      !existingKycData.verificationTermsAcceptedAt
+    ) {
+      throw new BadRequestException('Accept the Terms of Verification before submitting KYC');
+    }
+
     const profileData: any = {
       kycData: {
+        ...existingKycData,
         idType: data.idType,
         idNumber: data.idNumber,
         documentUrl: data.documentUrl,
