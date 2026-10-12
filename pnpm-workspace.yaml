@@ -1,10 +1,10 @@
 packages:
   - '.'
 
-onlyBuiltDependencies:
-  - '@google/genai'
-  - '@nestjs/core'
-  - '@swc/core'
-  - esbuild
-  - msgpackr-extract
-  - protobufjs
+allowBuilds:
+  '@google/genai': true
+  '@nestjs/core': true
+  '@swc/core': true
+  esbuild: true
+  msgpackr-extract: true
+  protobufjs: true
