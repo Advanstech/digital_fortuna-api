@@ -4,7 +4,9 @@ packages:
 allowBuilds:
   '@google/genai': true
   '@nestjs/core': true
+  '@scarf/scarf': true
   '@swc/core': true
+  bcrypt: true
   esbuild: true
   msgpackr-extract: true
   protobufjs: true
