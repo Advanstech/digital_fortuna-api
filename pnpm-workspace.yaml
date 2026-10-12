@@ -1,7 +1,10 @@
-allowBuilds:
-  '@google/genai': set this to true or false
-  '@nestjs/core': set this to true or false
-  '@swc/core': set this to true or false
-  esbuild: set this to true or false
-  msgpackr-extract: set this to true or false
-  protobufjs: set this to true or false
+packages:
+  - '.'
+
+onlyBuiltDependencies:
+  - '@google/genai'
+  - '@nestjs/core'
+  - '@swc/core'
+  - esbuild
+  - msgpackr-extract
+  - protobufjs
