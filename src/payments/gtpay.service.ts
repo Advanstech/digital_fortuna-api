@@ -34,11 +34,12 @@ export class GtpayService {
     private configService: ConfigService,
     @Inject(DRIZZLE_DB) private db: PostgresJsDatabase<typeof schema>,
   ) {
-    this.baseUrl = this.configService.get<string>('GTPAY_API_URL')!;
+    this.baseUrl = (this.configService.get<string>('GTPAY_API_URL') || '').replace(/\/$/, '');
     // The callback URL that GTBank will POST the final status to.
     // This should point to our own API's callback endpoint.
+    const publicUrl = (this.configService.get<string>('API_PUBLIC_URL') || 'http://localhost:4000').replace(/\/$/, '');
     this.callbackUrl = this.configService.get<string>('GTPAY_CALLBACK_URL')
-      || `${this.configService.get<string>('API_PUBLIC_URL') || 'http://localhost:4000'}/v1/payments/gtpay/callback`;
+      || `${publicUrl}/v1/payments/gtpay/callback`;
   }
 
   /**
