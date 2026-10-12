@@ -21,7 +21,8 @@
     "seed": "tsx src/db/seed.ts",
     "promote:admin": "tsx src/db/promote-admin.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:baseline": "tsx src/db/baseline-migrations.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.97.1",
