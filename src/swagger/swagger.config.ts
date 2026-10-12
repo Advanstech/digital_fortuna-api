@@ -10,7 +10,7 @@ export function setupSwagger(app: any): void {
 - **Authentication**: JWT-based auth with 2FA support
 - **Listings**: Browse and search startup listings
 - **Deals**: Manage acquisition deals with AI-powered insights
-- **Payments**: Secure payment processing via Stripe and Paystack
+- **Payments**: Secure payment processing via GTPay
 - **AI Services**: Due diligence, valuations, and document generation
 
 ## Rate Limits

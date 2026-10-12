@@ -61,7 +61,7 @@ export class InvoicesService {
 
     // Update the invoice with the GTPay reference
     await this.db.update(schema.invoices)
-      .set({ paystackRef: payment.partnerTransId }) // reuse paystackRef column for GTPay ref
+      .set({ gtpayPartnerTransId: payment.partnerTransId })
       .where(eq(schema.invoices.id, invoiceId));
 
     if (payment.status === 'completed') {

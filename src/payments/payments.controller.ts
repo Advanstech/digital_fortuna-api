@@ -1,7 +1,5 @@
 import { Controller, Post, Get, Body, Param, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { StripeService } from './stripe.service';
-import { PaystackService } from './paystack.service';
 import { GtpayService } from './gtpay.service';
 import { EscrowService } from './escrow.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -14,25 +12,9 @@ import { RolesGuard } from '../common/guards/roles.guard';
 @Controller('payments')
 export class PaymentsController {
   constructor(
-    private readonly stripeService: StripeService,
-    private readonly paystackService: PaystackService,
     private readonly gtpayService: GtpayService,
     private readonly escrowService: EscrowService,
   ) {}
-
-  // ── Legacy Stripe/Paystack ──────────────────────────────────────────────
-
-  @Post('stripe/checkout')
-  @UseGuards(JwtAuthGuard, KycGuard)
-  async createStripeCheckout(@Body() body: { amount: number; currency: string; listingId: string }) {
-    return this.stripeService.createCheckoutSession(body.amount, body.currency, body.listingId);
-  }
-
-  @Post('paystack/checkout')
-  @UseGuards(JwtAuthGuard, KycGuard)
-  async createPaystackCheckout(@Body() body: { amount: number; email: string; listingId: string }) {
-    return this.paystackService.initializeTransaction(body.amount, body.email, body.listingId);
-  }
 
   // ── GTPay Services ──────────────────────────────────────────────────────
 

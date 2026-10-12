@@ -287,7 +287,7 @@ Return ONLY a JSON object:
 
 Buyer: ${buyerName}
 Seller: ${sellerName}
-Escrow Agent: Digital Fortuna Computing (via Stripe/Paystack)
+Escrow Agent: Digital Fortuna Computing (via GTPay)
 Business: ${listing.title}
 Purchase Price: $${deal.agreedPrice?.toLocaleString() || 'TBD'}
 

@@ -64,7 +64,7 @@ const DEMO_LISTINGS = [
     acquisitionPrice: 8500,
     revenueMrr: 1800,
     revenueArr: 21600,
-    techStack: ['React Native', 'Node.js', 'MongoDB', 'Socket.IO', 'Stripe', 'Expo'],
+    techStack: ['React Native', 'Node.js', 'MongoDB', 'Socket.IO', 'Expo'],
     demoUrl: '/images/fortunaeats.png',
     featured: true,
     verified: true,
@@ -92,7 +92,7 @@ const DEMO_LISTINGS = [
       relevance:
         'Restaurants are suffering from app fatigue and high 3rd-party delivery fees. FortunaEats consolidates the stack, offering a unified hub that directly impacts their bottom line.',
       growth: [
-        'Implement a per-transaction processing fee via Stripe Connect.',
+        'Implement a per-transaction processing fee via a local payment provider.',
         'White-label the platform for ghost kitchens and virtual brands.',
         'Build a native consumer-facing loyalty app integration.',
       ],
@@ -266,7 +266,7 @@ const DEMO_LISTINGS = [
       benefits: [
         { title: 'Immediate Cash Flow', desc: 'Generating nearly $10k MRR with highly sticky enterprise clients and exceptionally low churn.' },
         { title: 'Defensible Moat', desc: 'Proprietary prompt-diffing engine and built-in A/B testing infrastructure that took 14 months to engineer.' },
-        { title: 'Turnkey Operations', desc: 'Fully automated billing via Stripe and self-serve onboarding. Requires less than 5 hours of maintenance a week.' },
+        { title: 'Turnkey Operations', desc: 'Fully automated billing and self-serve onboarding. Requires less than 5 hours of maintenance a week.' },
         { title: 'High-Margin Infrastructure', desc: 'Optimized serverless architecture costing less than $200/mo, maintaining a 90%+ profit margin.' },
       ],
       relevance:
