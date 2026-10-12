@@ -58,9 +58,15 @@ async function bootstrap() {
     threshold: 1024, // Compress responses > 1KB
   });
 
-  // Security: CORS configuration
+  // Security: CORS configuration (supports comma-separated origins)
+  const rawOrigins = configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+  const allowedOrigins = rawOrigins
+    .split(',')
+    .map((o) => o.trim().replace(/["'\s]+/g, ''))
+    .filter(Boolean);
+
   await app.register(cors, {
-    origin: configService.get<string>('FRONTEND_URL') || 'http://localhost:3000',
+    origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

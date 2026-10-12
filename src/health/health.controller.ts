@@ -43,10 +43,12 @@ export class HealthController {
   })
   @ApiResponse({ status: 503, description: 'Application is unhealthy' })
   async check(): Promise<HealthCheckResult> {
-    return this.health.check([
-      () => this.database.isHealthy('database'),
-      () => this.redis.isHealthy('redis'),
-    ]);
+    const checks = [() => this.database.isHealthy('database')];
+    // Only check Redis if a Redis URL is configured; otherwise treat as skipped/optional
+    if (process.env.REDIS_URL) {
+      checks.push(() => this.redis.isHealthy('redis'));
+    }
+    return this.health.check(checks);
   }
 
   @Public()
@@ -63,9 +65,10 @@ export class HealthController {
   @HealthCheck()
   @ApiOperation({ summary: 'Kubernetes readiness probe' })
   async readiness(): Promise<HealthCheckResult> {
-    return this.health.check([
-      () => this.database.isHealthy('database'),
-      () => this.redis.isHealthy('redis'),
-    ]);
+    const checks = [() => this.database.isHealthy('database')];
+    if (process.env.REDIS_URL) {
+      checks.push(() => this.redis.isHealthy('redis'));
+    }
+    return this.health.check(checks);
   }
 }
