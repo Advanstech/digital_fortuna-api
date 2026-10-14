@@ -168,17 +168,23 @@ export class AuthService {
     };
   }
 
-  async refreshTokens(userId: string, refreshToken: string) {
+  async refreshTokens(userId: string | undefined, refreshToken: string) {
+    let payload: any;
     try {
-      this.jwtService.verify(refreshToken);
+      payload = this.jwtService.verify(refreshToken);
     } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const effectiveUserId = userId || payload.sub;
+    if (!effectiveUserId) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
     const users = await this.db
       .select()
       .from(schema.users)
-      .where(eq(schema.users.id, userId))
+      .where(eq(schema.users.id, effectiveUserId))
       .limit(1);
 
     if (!users.length || !users[0].refreshToken) {

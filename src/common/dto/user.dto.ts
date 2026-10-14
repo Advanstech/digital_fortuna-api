@@ -39,9 +39,10 @@ export class LoginDto {
 }
 
 export class RefreshTokenDto {
-  @ApiProperty({ description: 'User ID' })
+  @ApiPropertyOptional({ description: 'User ID (optional, extracted from refresh token payload if omitted)' })
+  @IsOptional()
   @IsUUID()
-  userId!: string;
+  userId?: string;
 
   @ApiProperty({ description: 'Refresh token' })
   @IsString()
